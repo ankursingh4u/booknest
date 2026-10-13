@@ -1,0 +1,6 @@
+{
+  "mcpServers": {
+    "rea": { "command": "npx", "args": ["-y", "rea-agents@latest", "mcp"] },
+    "shopify-dev": { "command": "npx", "args": ["-y", "@shopify/dev-mcp@latest"] }
+  }
+}

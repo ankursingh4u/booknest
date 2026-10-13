@@ -1,0 +1,33 @@
+name = "BookNest"
+client_id = "REPLACE_WITH_CLIENT_ID"
+application_url = "https://booknest.fly.dev"
+embedded = true
+
+scopes = "read_products,write_products,read_orders,write_orders,read_draft_orders,write_draft_orders,read_customers,write_customers,read_locations"
+
+[webhooks]
+api_version = "2026-07"
+
+  [[webhooks.subscriptions]]
+  topics = ["app/uninstalled"]
+  uri = "/webhooks/app/uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = ["orders/create", "orders/cancelled", "orders/paid", "refunds/create"]
+  uri = "/webhooks/orders"
+
+  [[webhooks.subscriptions]]
+  topics = ["customers/data_request", "customers/redact", "shop/redact"]
+  uri = "/webhooks/compliance"
+
+[auth]
+redirect_urls = ["https://booknest.fly.dev/auth/callback"]
+
+[app_proxy]
+url = "https://booknest.fly.dev/proxy"
+subpath = "booknest"
+prefix = "apps"
+
+[build]
+automatically_update_urls_on_dev = true
+include_config_on_deploy = true

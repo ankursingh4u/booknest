@@ -1,0 +1,304 @@
+generator client { provider = "prisma-client-js" }
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Shop {
+  id          String   @id @default(cuid())
+  domain      String   @unique
+  accessToken String
+  scope       String
+  timezone    String   @default("UTC")
+  currency    String   @default("USD")
+  email       String?
+  plan        Plan     @default(FREE)
+  trialEndsAt DateTime?
+  onboardedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  locations Location[]
+  staff     StaffMember[]
+  services  Service[]
+  bookings  Booking[]
+  templates NotificationTemplate[]
+  seats     TeamSeat[]
+  insights  InsightsSnapshot[]
+  waitlist  WaitlistEntry[]
+
+  @@index([domain])
+}
+
+enum Plan { FREE STANDARD PRO PRO_PLUS }
+
+model Subscription {
+  id               String    @id @default(cuid())
+  shopId           String    @unique
+  shop             Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  plan             Plan
+  status           String
+  shopifyChargeId  String?
+  currentPeriodEnd DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model TeamSeat {
+  id        String   @id @default(cuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  email     String
+  staffId   String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  @@unique([shopId, email])
+}
+
+model Location {
+  id            String   @id @default(cuid())
+  shopId        String
+  shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name          String
+  address       String?
+  timezone      String
+  posLocationId String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  services  Service[]
+  staff     StaffMember[]
+  bookings  Booking[]
+  blackouts Blackout[]
+
+  @@index([shopId])
+}
+
+model StaffMember {
+  id                 String   @id @default(cuid())
+  shopId             String
+  shop               Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  firstName          String
+  lastName           String
+  email              String
+  phone              String?
+  contactLink        String?
+  imageUrl           String?
+  bio                String?
+  timezone           String
+  active             Boolean  @default(true)
+  googleRefreshToken String?
+  googleCalendarId   String?
+  createdAt          DateTime @default(now())
+
+  locationIds  String[]
+  services     ServiceStaff[]
+  availability AvailabilityRule[]
+  bookings     Booking[]
+  blackouts    Blackout[]
+  timeOff      TimeOffRequest[]
+
+  @@index([shopId, active])
+}
+
+model TimeOffRequest {
+  id        String      @id @default(cuid())
+  shopId    String
+  staffId   String
+  staff     StaffMember @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  startAt   DateTime
+  endAt     DateTime
+  reason    String?
+  status    String      @default("PENDING")
+  createdAt DateTime    @default(now())
+  @@index([shopId, status])
+}
+
+model Service {
+  id             String      @id @default(cuid())
+  shopId         String
+  shop           Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  locationId     String
+  location       Location    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  title          String
+  slug           String
+  description    String?
+  durationMin    Int
+  bufferBefore   Int         @default(0)
+  bufferAfter    Int         @default(0)
+  capacity       Int         @default(1)
+  isPrivate      Boolean     @default(true)
+  priceCents     Int         @default(0)
+  depositType    DepositType @default(NONE)
+  depositValue   Int         @default(0)
+  variantId      String?
+  minNoticeHours Int         @default(1)
+  maxAdvanceDays Int         @default(60)
+  active         Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  staff        ServiceStaff[]
+  availability AvailabilityRule[]
+  bookings     Booking[]
+  questions    IntakeQuestion[]
+
+  @@unique([shopId, slug])
+  @@index([shopId, active])
+}
+
+enum DepositType { NONE FIXED PERCENT FULL }
+
+model ServiceStaff {
+  serviceId String
+  staffId   String
+  service   Service     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  staff     StaffMember @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  @@id([serviceId, staffId])
+}
+
+model AvailabilityRule {
+  id        String       @id @default(cuid())
+  shopId    String
+  staffId   String?
+  staff     StaffMember? @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  serviceId String?
+  service   Service?     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  weekday   Int
+  startTime String
+  endTime   String
+  timezone  String
+  createdAt DateTime     @default(now())
+
+  @@index([shopId, staffId, weekday])
+}
+
+model Blackout {
+  id         String       @id @default(cuid())
+  shopId     String
+  locationId String?
+  location   Location?    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  staffId    String?
+  staff      StaffMember? @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  startAt    DateTime
+  endAt      DateTime
+  reason     String?
+  createdAt  DateTime     @default(now())
+
+  @@index([shopId, startAt])
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  shopId          String
+  shop            Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  serviceId       String
+  service         Service       @relation(fields: [serviceId], references: [id])
+  staffId         String
+  staff           StaffMember   @relation(fields: [staffId], references: [id])
+  locationId      String
+  location        Location      @relation(fields: [locationId], references: [id])
+
+  orderId         String?
+  customerId      String?
+  customerEmail   String
+  customerName    String?
+  customerPhone   String?
+
+  startAt         DateTime
+  endAt           DateTime
+  status          BookingStatus @default(PENDING)
+
+  notes           String?
+  source          String        @default("widget")
+  rescheduleToken String        @unique @default(cuid())
+  cancelToken     String        @unique @default(cuid())
+  googleEventId   String?
+  checkedInAt     DateTime?
+  checkedInBy     String?
+  contactLink     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  answers IntakeAnswer[]
+  jobs    JobLog[]
+
+  @@unique([staffId, startAt, status])
+  @@index([shopId, status, startAt])
+  @@index([shopId, startAt])
+  @@index([orderId])
+}
+
+enum BookingStatus { PENDING CONFIRMED CANCELLED COMPLETED NO_SHOW }
+
+model IntakeQuestion {
+  id        String   @id @default(cuid())
+  shopId    String
+  serviceId String
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  label     String
+  type      String
+  required  Boolean  @default(false)
+  options   String[]
+  sortOrder Int      @default(0)
+}
+
+model IntakeAnswer {
+  id         String  @id @default(cuid())
+  bookingId  String
+  booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  questionId String
+  value      String
+  @@index([bookingId])
+}
+
+model NotificationTemplate {
+  id        String  @id @default(cuid())
+  shopId    String
+  shop      Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  type      String
+  channel   String  @default("email")
+  subject   String?
+  body      String
+  enabled   Boolean @default(true)
+  offsetMin Int?
+  @@unique([shopId, type, channel])
+}
+
+model JobLog {
+  id        String   @id @default(cuid())
+  dedupeKey String   @unique
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  type      String
+  sentAt    DateTime @default(now())
+  @@index([type, sentAt])
+}
+
+model InsightsSnapshot {
+  id         String   @id @default(cuid())
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  forDate    DateTime
+  highlights String[]
+  nudge      String?
+  model      String   @default("claude-haiku")
+  createdAt  DateTime @default(now())
+  @@unique([shopId, forDate])
+}
+
+model WaitlistEntry {
+  id            String    @id @default(cuid())
+  shopId        String
+  shop          Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  serviceId     String
+  staffId       String?
+  customerEmail String
+  desiredStart  DateTime
+  desiredEnd    DateTime
+  notifiedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  @@index([shopId, serviceId])
+}
