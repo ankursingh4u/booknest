@@ -1,4 +1,7 @@
-generator client { provider = "prisma-client-js" }
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
@@ -19,19 +22,25 @@ model Shop {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  locations Location[]
-  staff     StaffMember[]
-  services  Service[]
-  bookings  Booking[]
-  templates NotificationTemplate[]
-  seats     TeamSeat[]
-  insights  InsightsSnapshot[]
-  waitlist  WaitlistEntry[]
+  locations    Location[]
+  staff        StaffMember[]
+  services     Service[]
+  bookings     Booking[]
+  templates    NotificationTemplate[]
+  seats        TeamSeat[]
+  insights     InsightsSnapshot[]
+  waitlist     WaitlistEntry[]
+  subscription Subscription?
 
   @@index([domain])
 }
 
-enum Plan { FREE STANDARD PRO PRO_PLUS }
+enum Plan {
+  FREE
+  STANDARD
+  PRO
+  PRO_PLUS
+}
 
 model Subscription {
   id               String    @id @default(cuid())
@@ -68,7 +77,6 @@ model Location {
   createdAt     DateTime @default(now())
 
   services  Service[]
-  staff     StaffMember[]
   bookings  Booking[]
   blackouts Blackout[]
 
@@ -148,7 +156,12 @@ model Service {
   @@index([shopId, active])
 }
 
-enum DepositType { NONE FIXED PERCENT FULL }
+enum DepositType {
+  NONE
+  FIXED
+  PERCENT
+  FULL
+}
 
 model ServiceStaff {
   serviceId String
@@ -231,7 +244,13 @@ model Booking {
   @@index([orderId])
 }
 
-enum BookingStatus { PENDING CONFIRMED CANCELLED COMPLETED NO_SHOW }
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
 
 model IntakeQuestion {
   id        String   @id @default(cuid())
