@@ -10,7 +10,7 @@ export function validateTarget(env) {
   const api = new URL(env.COOLIFY_API_URL);
   const app = new URL(env.SHOPIFY_APP_URL);
   if (api.protocol !== "https:" || api.username || api.password || api.search || api.hash || !["", "/", "/api/v1", "/api/v1/"].includes(api.pathname)) throw new Error("Use a trusted HTTPS Coolify origin or /api/v1 URL.");
-  if (app.origin !== "https://app.booknestapp.live" || !["", "/"].includes(app.pathname) || app.search || app.hash) throw new Error("Deployment is scoped to https://app.booknestapp.live.");
+  if (app.origin !== "https://app.booknestapp.site" || !["", "/"].includes(app.pathname) || app.search || app.hash) throw new Error("Deployment is scoped to https://app.booknestapp.site.");
   for (const key of required.filter(key => key.endsWith("_UUID"))) if (!/^[a-zA-Z0-9-]{8,80}$/.test(env[key])) throw new Error("Invalid resource ID: " + key);
   if (env.SESSION_SECRET.length < 32) throw new Error("SESSION_SECRET must have at least 32 characters.");
   return { api: api.origin + "/api/v1", origin: app.origin, project: env.COOLIFY_PROJECT_UUID, environment: env.COOLIFY_ENVIRONMENT_UUID, server: env.COOLIFY_SERVER_UUID, database: env.COOLIFY_DATABASE_UUID };

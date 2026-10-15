@@ -1,6 +1,6 @@
 name = "BookNest"
 client_id = "977216ff65e771c094a5b882f610bb14"
-application_url = "https://app.booknestapp.live"
+application_url = "https://app.booknestapp.site"
 embedded = true
 
 [access_scopes]
@@ -22,10 +22,10 @@ api_version = "2026-07"
   uri = "/webhooks/compliance"
 
 [auth]
-redirect_urls = ["https://app.booknestapp.live/auth/callback"]
+redirect_urls = ["https://app.booknestapp.site/auth/callback"]
 
 [app_proxy]
-url = "https://app.booknestapp.live/proxy"
+url = "https://app.booknestapp.site/proxy"
 subpath = "booknest"
 prefix = "apps"
 
