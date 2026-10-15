@@ -5,6 +5,7 @@ const directModels = new Set([
   "Subscription", "TeamSeat", "SeatUsage", "Location", "StaffMember", "TimeOffRequest", "Service",
   "AvailabilityRule", "AdditionalHours", "Blackout", "Booking", "IntakeQuestion", "NotificationTemplate",
   "InsightsSnapshot", "WaitlistEntry", "Reservation", "WebhookReceipt", "NotificationTask", "GoogleOAuthState",
+  "AccessLog",
 ]);
 const readOperations = new Set([
   "findUnique", "findUniqueOrThrow", "findFirst", "findFirstOrThrow", "findMany",

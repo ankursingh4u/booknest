@@ -5,7 +5,7 @@ import { syncBookingCalendar } from "./lib/calendar/sync.server";
 import { BookingError } from "./lib/bookings/validation";
 import { DateTime } from "luxon";
 import PgBoss from "pg-boss";
-import { getShopDatabase, markShopUninstalled, pendingBackgroundJobs, purgeShopData, storesForSeatBilling } from "./db.server";
+import { CUSTOMER_DATA_RETENTION_MONTHS, getShopDatabase, markShopUninstalled, pendingBackgroundJobs, purgeExpiredCustomerData, purgeShopData, storesForSeatBilling } from "./db.server";
 import { processOrder, processOrderCancellation, processRefund } from "./lib/webhooks/orders.server";
 import { processCustomerRequest } from "./lib/webhooks/privacy.server";
 import { sendNotification } from "./lib/notifications/send.server";
@@ -66,6 +66,7 @@ await boss.work<Job>("booknest-seat-usage", { batchSize: 1 }, async jobs => {
   }
 });
 let lastBillingRefresh = 0;
+let lastRetentionRun = 0;
 let scanning = false;
 async function scan() {
   if (scanning) return;
@@ -82,6 +83,11 @@ async function scan() {
         catch { console.error("BookNest subscription refresh failed"); }
         await new Promise(resolve => setTimeout(resolve, 500));
       }
+    }
+    if (DateTime.utc().toMillis() - lastRetentionRun > 86400000) {
+      lastRetentionRun = DateTime.utc().toMillis();
+      try { await purgeExpiredCustomerData(DateTime.utc().minus({ months: CUSTOMER_DATA_RETENTION_MONTHS }).toJSDate()); }
+      catch { console.error("BookNest retention purge failed"); }
     }
   } catch { console.error("BookNest background scan failed"); }
   finally { scanning = false; }

@@ -40,6 +40,20 @@ model Shop {
   notificationTasks NotificationTask[]
   googleOAuthStates GoogleOAuthState[]
   additionalHours AdditionalHours[]
+  accessLogs AccessLog[]
+}
+
+/** Audit trail of staff/team access to records containing customer personal data. */
+model AccessLog {
+  id          String   @id @default(cuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  actor       String
+  action      String
+  recordCount Int
+  createdAt   DateTime @default(now())
+
+  @@index([shopId, createdAt])
 }
 
 enum Plan {

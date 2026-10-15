@@ -112,12 +112,35 @@ export async function markShopUninstalled(shopId: string, now: Date) {
     prisma.shop.update({ where: { id: shopId }, data: { accessToken: "", uninstalledAt: now } }),
   ]);
 }
+/** Customer PII is anonymized this long after the appointment date; see /privacy. */
+export const CUSTOMER_DATA_RETENTION_MONTHS = 24;
+
+/** Worker-only; anonymizes customer PII past the retention window. Booking rows and their
+ * times/status/price are kept for aggregate reporting, matching the privacy policy. */
+export async function purgeExpiredCustomerData(cutoff: Date) {
+  const expired = await prisma.booking.findMany({
+    where: { startAt: { lt: cutoff }, customerEmail: { not: "" } },
+    select: { id: true, shopId: true },
+  });
+  const byShop = new Map<string, string[]>();
+  for (const booking of expired) byShop.set(booking.shopId, [...(byShop.get(booking.shopId) ?? []), booking.id]);
+  for (const [shopId, ids] of byShop) {
+    await withShopTransaction(shopId, async tx => {
+      await tx.notificationTask.deleteMany({ where: { bookingId: { in: ids } } });
+      await tx.intakeAnswer.deleteMany({ where: { bookingId: { in: ids } } });
+      await tx.booking.updateMany({ where: { id: { in: ids } }, data: { customerId: null, customerEmail: "", customerName: null, customerPhone: null, notes: null } });
+    });
+  }
+  return expired.length;
+}
+
 /** Called only for a verified SHOP_REDACT webhook. */
 export async function purgeShopData(shopId: string) {
   const shop = await prisma.shop.findUnique({ where: { id: shopId }, select: { domain: true } });
   if (!shop) return;
   await prisma.$transaction(async tx => {
     await tx.session.deleteMany({ where: { shop: shop.domain } });
+    await tx.accessLog.deleteMany({ where: { shopId } });
     await tx.notificationTask.deleteMany({ where: { shopId } });
     await tx.jobLog.deleteMany({ where: { booking: { shopId } } });
     await tx.intakeAnswer.deleteMany({ where: { booking: { shopId } } });

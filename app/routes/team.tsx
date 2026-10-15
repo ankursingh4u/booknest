@@ -6,9 +6,10 @@ import { requireTeam } from "../lib/team/auth.server";
 import { requestTimeOff } from "../lib/team/time-off.server";
 import { requireSameOrigin, teamCookie, teamHeaders } from "../lib/team/session.server";
 import { formError } from "../lib/admin/errors.server";
+import { logAccess } from "../lib/audit/access-log.server";
 export const headers = () => teamHeaders;
 export async function loader({ request }: LoaderFunctionArgs) {
-  const { db, staff } = await requireTeam(request);
+  const { db, staff, shopId, seat } = await requireTeam(request);
   const requested = new URL(request.url).searchParams.get("day") || "";
   const parsed = DateTime.fromISO(requested, { zone: staff.timezone });
   const start = /^\d{4}-\d{2}-\d{2}$/.test(requested) && parsed.isValid ? parsed.startOf("day") : DateTime.now().setZone(staff.timezone).startOf("day");
@@ -18,6 +19,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
         service: { select: { title: true } }, location: { select: { name: true } } }, orderBy: { startAt: "asc" }, take: 200 }),
     db.timeOffRequest.findMany({ where: { staffId: staff.id }, select: { id: true, startAt: true, endAt: true, reason: true, status: true }, orderBy: { createdAt: "desc" }, take: 50 }),
   ]);
+  await logAccess(shopId, "team:" + seat.id, "team_view_bookings", bookings.length);
   return { staff, bookings, requests, day: start.toISODate()!, previous: start.minus({ days: 7 }).toISODate()!, next: start.plus({ days: 7 }).toISODate()! };
 }
 export async function action({ request }: ActionFunctionArgs) {

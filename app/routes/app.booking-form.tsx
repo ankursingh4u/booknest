@@ -9,8 +9,9 @@ import { createBooking, listDaySlots, rescheduleBooking } from "../lib/bookings/
 import { BookingError } from "../lib/bookings/validation";
 import { formError } from "../lib/admin/errors.server";
 import { Field, SelectField, SaveButton } from "../components/Fields";
+import { logAccess } from "../lib/audit/access-log.server";
 export async function loader({ request, params }: LoaderFunctionArgs) {
-  const { shop, db } = await requireShop(request);
+  const { shop, db, session } = await requireShop(request);
   const url = new URL(request.url);
   const [services, settings, booking] = await Promise.all([
     db.service.findMany({ where: { active: true }, select: { id: true, title: true }, orderBy: { title: "asc" } }),
@@ -18,6 +19,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     params.bookingId ? db.booking.findUnique({ where: { id: params.bookingId }, select: { id: true, serviceId: true, quantity: true, customerName: true, customerEmail: true, status: true } }) : null,
   ]);
   if (params.bookingId && !booking) throw new Response("Booking not found.", { status: 404 });
+  if (booking) await logAccess(shop.id, String(session.onlineAccessInfo?.associated_user.id ?? "merchant"), "view_booking_detail", 1);
   const serviceId = booking?.serviceId ?? url.searchParams.get("serviceId") ?? "";
   const date = url.searchParams.get("date") ?? DateTime.now().setZone(settings.timezone).toISODate()!;
   const quantity = booking?.quantity ?? z.coerce.number().int().min(1).max(1000).parse(url.searchParams.get("quantity") ?? 1);

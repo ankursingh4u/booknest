@@ -8,8 +8,9 @@ import { cancelBooking } from "../lib/bookings/service.server";
 import { formError } from "../lib/admin/errors.server";
 import { RecordAction } from "../components/Fields";
 import { bookingFilters, bookingSelect, bookingTabs, bookingViews, calendarDays } from "../lib/bookings/views";
+import { logAccess } from "../lib/audit/access-log.server";
 export async function loader({ request }: LoaderFunctionArgs) {
-  const { shop, db } = await requireShop(request);
+  const { shop, db, session } = await requireShop(request);
   const settings = await db.shop.findUniqueOrThrow({ where: { id: shop.id }, select: { timezone: true } });
   const filters = bookingFilters(new URL(request.url).searchParams, settings.timezone);
   const [bookings, count, locations, staff, services, insight] = await Promise.all([
@@ -19,6 +20,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     db.service.findMany({ where: { active: true }, select: { id: true, title: true }, orderBy: { title: "asc" }, take: 500 }),
     db.insightsSnapshot.findFirst({ where: { createdAt: { gte: DateTime.utc().minus({ days: 1 }).toJSDate() } }, select: { highlights: true, nudge: true, model: true }, orderBy: { createdAt: "desc" } }),
   ]);
+  await logAccess(shop.id, String(session.onlineAccessInfo?.associated_user.id ?? "merchant"), "view_bookings", bookings.length);
   const { where: _where, orderBy: _orderBy, ...controls } = filters;
   return { bookings, count, insight, ...controls, staffOptions: staff, serviceOptions: services, setup: { locations, staff: staff.length, services: services.length } };
 }

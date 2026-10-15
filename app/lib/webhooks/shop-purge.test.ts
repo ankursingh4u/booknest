@@ -11,7 +11,7 @@ import { purgeShopData } from "../../db.server";
 beforeEach(() => {
   state.closures = [{ shopId: "shop-a", reason: "Private closure details" }, { shopId: "shop-b", reason: "Other store" }];
   state.extraHours = [{ shopId: "shop-a", note: "Private schedule" }, { shopId: "shop-b", note: "Other schedule" }];
-  state.tx = Object.fromEntries(["session", "notificationTask", "jobLog", "intakeAnswer", "booking", "reservation", "serviceStaff", "service", "staffMember", "location", "shop"].map(key => [key, { deleteMany: vi.fn(), delete: vi.fn() }]));
+  state.tx = Object.fromEntries(["session", "accessLog", "notificationTask", "jobLog", "intakeAnswer", "booking", "reservation", "serviceStaff", "service", "staffMember", "location", "shop"].map(key => [key, { deleteMany: vi.fn(), delete: vi.fn() }]));
   state.tx.blackout = { deleteMany: vi.fn().mockImplementation(({ where }) => { state.closures = state.closures.filter(row => row.shopId !== where.shopId); }) };
   state.tx.additionalHours = { deleteMany: vi.fn().mockImplementation(({ where }) => { state.extraHours = state.extraHours.filter(row => row.shopId !== where.shopId); }) };
 });
