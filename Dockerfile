@@ -20,4 +20,4 @@ COPY --from=build /app/app ./app
 COPY --from=build /app/scripts ./scripts
 COPY package.json ./
 EXPOSE 3000
-CMD ["sh", "-c", "pnpm db:deploy && exec node scripts/start.mjs"]
+CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && exec node scripts/start.mjs"]
