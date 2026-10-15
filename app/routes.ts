@@ -12,6 +12,7 @@ export default [
   { path: "proxy/:endpoint", file: "routes/proxy.ts" },
   { path: "health", file: "routes/health.ts" },
   { path: "privacy", file: "routes/privacy.tsx" },
+  { path: "terms", file: "routes/terms.tsx" },
   { path: "app", file: "routes/app.tsx", children: [
     { index: true, file: "routes/app._index.tsx" },
     { path: "setup", file: "routes/app.setup.tsx" },

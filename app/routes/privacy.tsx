@@ -80,6 +80,8 @@ export default function Privacy() {
         <p>
           If this policy changes, we will update the date at the top of this page.
         </p>
+
+        <p>Merchants: see also our <a href="/terms">Merchant Terms &amp; Data Processing Agreement</a>.</p>
       </section>
     </main>
   );
