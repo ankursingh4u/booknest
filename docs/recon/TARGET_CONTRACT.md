@@ -35,6 +35,82 @@ endpoints and is already past the "pick a date/time" step, and (b) static
 analysis of the widget's own JS bundle and the `/api/settings` config
 payload. Where this matters, it's flagged INFERRED explicitly.
 
+## Continuation: saved bundle inspection (2026-10-14)
+
+**STATIC EVIDENCE, not a live request capture.** In the saved
+`bundles/.../assets/embedInit.js`, `addEventToCart` constructs a Shopify
+`cart/add.js` POST containing `items` (variant id, quantity, properties),
+cart attributes, and requested theme sections. If temporary bookings are
+enabled, it first posts quantity, event/product identifiers, selected time,
+and properties to `/api/events/{id}/bookings/temporary`; its response supplies
+`miniSlug` and optional `expiresAt`. Deposit bookings instead request
+`/api/events/{id}/draftOrder/create` and follow its checkout URL. Free bookings
+can use `/api/storefront/events/{id}/bookings` without checkout.
+
+The interrupted retry's saved network log contains calendar analytics,
+monthly availability, and busy-slot requests, but no cart or creation call.
+These code paths therefore remain unverified at runtime. No browser is
+connected in the Codex session. Finish the interactive capture before
+Phase 5; do not promote this source inspection to OBSERVED network evidence.
+
+## Retry repair (2026-10-14)
+
+Inspection of Claude's saved DOM and driver found two concrete targeting bugs:
+page-wide "available" matches included stylesheet text before the slot rows,
+and the chosen "Book Now" control belonged to the separate floating button.
+The real calendar rows are children of `.servicify-slots-scroll`; the paid
+booking cart control carries `data-servicify="servicify-add-to-cart-button"`
+and the saved source renders it only after selecting a time.
+
+The calendar in the saved DOM is an ordinary modal subtree. The earlier
+driver's closed-shadow-root explanation was not established as the cause of
+the REA click hang. That initial hang remains undiagnosed.
+
+A repaired runner is preserved at `scripts/recon/capture-booking.mjs`.
+Ten regression tests cover real saved slot rows, irrelevant text, sold-out
+and disabled rows, confirmation targeting, traversal, and capture validation.
+The complete suite has 51 passing tests and TypeScript passes. The runner also
+passes Node's syntax check. It uses an isolated profile/port, bounded waits,
+and stops without checkout submission. Success requires a 2xx cart request
+and response with matching variant/booking properties; analytics alone do not
+satisfy the gate.
+
+**Live execution is pending.** No browser is connected to this Codex session.
+No new successful cart request/response was captured during the repair. Expected
+output after a successful run is `booking-cart-capture.json`; partial failures
+produce `retry-network-requests.json` and `retry-failure.json`. These generated
+evidence files remain gitignored.
+
+## Extracted checkout contract (saved source, 2026-10-14)
+
+The needed checkout metadata is now extracted from `embedInit.js` and
+`TockCalendarView.93925c3a.js`. This is source evidence, not a successful live
+request. Machine-readable shapes and source hashes are in
+`FRONTEND_CONTRACT.json`.
+
+| Line-item property | Meaning |
+|---|---|
+| `_Event #` | Internal event identifier |
+| `_Booking Timezone` | Effective booking timezone |
+| `_Lang` | Customer locale |
+| `_Start Date` | Long formatted date |
+| `_Start Time`, `_End Time` | Local time strings |
+| `_Booked With` | Employee name and identifier |
+| `_ID` | Temporary booking miniSlug |
+| `_ExpiresAt` | Hold expiry |
+
+The source builds the employee property as name followed by identifier. Time
+and date rendering use `h:mm a` and `dddd, MMMM Do YYYY`; additional localized
+display properties and intake responses can be appended. `_End Date` and
+`Date #` are declared constants, but this property builder does not populate
+them. Paid bookings recheck availability, optionally create a temporary hold,
+then submit the native cart request. Checkout completion and order-webhook
+behavior remain unobserved.
+
+Phase 0's original capture/contract gate is met. This extracted contract is
+sufficient to begin Phase 1 (scaffold/auth). Live cart validation stays open
+before Phase 5; mobile parity remains open before the widget UI phase.
+
 ## Endpoints
 
 All against `https://servicify-appointments.herokuapp.com`, the app's
@@ -218,8 +294,8 @@ against the target; re-run a mobile-viewport capture before relying on it.
   inline. Raw evidence: `contracts.json`, `site.json`, `booking-capture.json`.
 - Full 97-event service catalog and its field schema — `contracts.json`,
   endpoint `GET /api/storefront/users/1/events`.
-- Widget surface structure, calendar/time-slot UI copy and states up to
-  "time selected" — `site.json` accessibility-tree artifact.
+- Widget surface structure, calendar/time-slot UI copy and rendered slot
+  lists before interactive time selection — `site.json` accessibility-tree artifact.
 - Theme app extension architecture, bundle names, `react-day-picker` —
   `widget-static.json` + raw files under `bundles/`.
 - App identity ("Easy Appointment Booking" / Servicify) — footer links and

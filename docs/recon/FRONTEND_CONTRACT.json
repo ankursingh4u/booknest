@@ -1,0 +1,116 @@
+{
+  "evidence": "EXTRACTED_FROM_SAVED_SOURCE",
+  "liveCartRequestConfirmed": false,
+  "sourceFiles": [
+    {
+      "file": "docs/recon/bundles\\files\\origins\\6c5b4e19542d1fa0833ef01892eba07c47dff5b08ab7cbf20fefba85de2bfb35\\extensions\\01a135f9-d5f2-7825-84bb-93a391eaba83\\digital-appointments-573\\assets\\embedInit.js",
+      "sha256": "b40c7597115c1bfced6b3400061055123d328ea43695b8dac15e71c5aecdb546"
+    },
+    {
+      "file": "docs/recon/bundles\\files\\origins\\6c5b4e19542d1fa0833ef01892eba07c47dff5b08ab7cbf20fefba85de2bfb35\\extensions\\01a135f9-d5f2-7825-84bb-93a391eaba83\\digital-appointments-573\\assets\\TockCalendarView.93925c3a.js",
+      "sha256": "25c7885d3d07148d992df74e0b22ef5953530d7aec4adf9ada973450116373b7"
+    },
+    {
+      "file": "docs/recon/bundles\\files\\origins\\6c5b4e19542d1fa0833ef01892eba07c47dff5b08ab7cbf20fefba85de2bfb35\\extensions\\01a135f9-d5f2-7825-84bb-93a391eaba83\\digital-appointments-573\\assets\\TockCalendarView.5f81c6f3.js",
+      "sha256": "41df2a5746615c0f05a4f39d82dcb996b90aa90f6d71db6a8cc02eca3fc72c41"
+    }
+  ],
+  "cartProperties": {
+    "_Event #": "event.id",
+    "_Booking Timezone": "effective IANA timezone",
+    "_Lang": "customer locale",
+    "_Start Date": "local date formatted dddd, MMMM Do YYYY",
+    "_Start Time": "local start time, h:mm a",
+    "_End Time": "local end time, h:mm a",
+    "_Booked With": "employee name + separator + employee id",
+    "_ID": "temporary booking miniSlug, when enabled",
+    "_ExpiresAt": "temporary booking expiry, when enabled"
+  },
+  "flows": {
+    "paid": {
+      "availabilityRecheck": "busy slots re-fetched and remaining quantity checked before creation",
+      "hold": {
+        "method": "POST",
+        "path": "/api/events/{eventId}/bookings/temporary",
+        "requestFields": [
+          "quantity",
+          "eventId",
+          "productId",
+          "selectedTime",
+          "properties"
+        ],
+        "responseFields": [
+          "miniSlug",
+          "expiresAt"
+        ]
+      },
+      "cart": {
+        "method": "POST",
+        "path": "/cart/add.js",
+        "requestShape": {
+          "items": [
+            {
+              "id": "Shopify variant ID",
+              "quantity": "attendees, or 1 for fixed-price events",
+              "properties": "booking metadata",
+              "selling_plan": "optional"
+            }
+          ],
+          "attributes": {
+            "__Servicify Appointment": "Yes"
+          },
+          "sections": "cart-items,cart-icon-bubble,cart-drawer,cart-live-region-text,cart-footer"
+        }
+      }
+    },
+    "deposit": {
+      "method": "POST",
+      "path": "/api/events/{eventId}/draftOrder/create",
+      "requestFields": [
+        "variantId",
+        "quantity",
+        "properties",
+        "attendees (conditional)",
+        "ticketSelections (conditional)",
+        "presentmentCurrencyCode (conditional)"
+      ],
+      "responseFields": [
+        "checkoutUrl"
+      ]
+    },
+    "free": {
+      "method": "POST",
+      "path": "/api/storefront/events/{eventId}/bookings",
+      "requestFields": [
+        "eventId",
+        "userId",
+        "isAdminCheckout",
+        "productId",
+        "variantId",
+        "orderId",
+        "price",
+        "customerEmail",
+        "contactEmail",
+        "contactPhone",
+        "orderProperties",
+        "quantity",
+        "firstName",
+        "lastName",
+        "employeeId",
+        "startDate",
+        "startTime",
+        "endTime",
+        "dateFormat",
+        "timeFormat",
+        "timezone",
+        "variantTitle",
+        "variantFullTitle"
+      ]
+    }
+  },
+  "pending": [
+    "Live paid cart request/response",
+    "Checkout completion and backend webhook behavior",
+    "Responsive parity at the required breakpoints"
+  ]
+}

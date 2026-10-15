@@ -1,9 +1,10 @@
 name = "BookNest"
-client_id = "REPLACE_WITH_CLIENT_ID"
-application_url = "https://booknest.fly.dev"
+client_id = "977216ff65e771c094a5b882f610bb14"
+application_url = "https://booknestapp.site"
 embedded = true
 
-scopes = "read_products,write_products,read_orders,write_orders,read_draft_orders,write_draft_orders,read_customers,write_customers,read_locations"
+[access_scopes]
+scopes = "read_products,write_products,read_publications,write_publications,read_orders,write_orders,read_draft_orders,write_draft_orders,read_customers,write_customers,read_locations"
 
 [webhooks]
 api_version = "2026-07"
@@ -17,14 +18,14 @@ api_version = "2026-07"
   uri = "/webhooks/orders"
 
   [[webhooks.subscriptions]]
-  topics = ["customers/data_request", "customers/redact", "shop/redact"]
+  compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
   uri = "/webhooks/compliance"
 
 [auth]
-redirect_urls = ["https://booknest.fly.dev/auth/callback"]
+redirect_urls = ["https://booknestapp.site/auth/callback"]
 
 [app_proxy]
-url = "https://booknest.fly.dev/proxy"
+url = "https://booknestapp.site/proxy"
 subpath = "booknest"
 prefix = "apps"
 

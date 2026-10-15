@@ -17,7 +17,7 @@ Order matters. Do not reorder.
 2. Complete Part 3 (credentials).
 3. Run Part 7 (REA extraction) — this is Phase 0.
 4. Execute Part 11 phases in order, one at a time.
-5. Between phases: /clear, git commit, fly deploy, visual parity check.
+5. Between phases: /clear, commit the verified changes, deploy the isolated Coolify app, and check visual parity.
 
 Claude Code: plan mode for every phase start and schema change; TDD loop for the
 engine (spec -> failing test -> implement -> green); /clear between phases.
@@ -80,12 +80,12 @@ Developer. Plan-gated cards show an "Unlock on higher plan" badge.
 
 # PART 3 — APIs AND CREDENTIALS
 
-Scopes: read_products, write_products, read_orders, write_orders,
+Scopes: read_products, write_products, read_publications, write_publications, read_orders, write_orders,
 read_draft_orders, write_draft_orders, read_customers, write_customers,
 read_locations. GDPR webhooks: customers/data_request, customers/redact,
 shop/redact.
 
-Must have: Neon (DATABASE_URL, DIRECT_URL), Fly.io, Resend (key + verified
+Must have: PostgreSQL (DATABASE_URL, DIRECT_URL), Coolify, Resend (key + verified
 domain), Google Cloud (Calendar API, OAuth web client), domain.
 Strongly recommended: Sentry DSN, Anthropic key.
 v2 only: Twilio, Azure, Zoom, Klaviyo.
@@ -97,14 +97,14 @@ Seven credentials give a fully functional submittable v1.
 # PART 4 — ARCHITECTURE
 
 Surfaces: Admin (React Router 7 + Polaris + App Bridge), Storefront (theme app
-extension). Backend Node.js on Fly.io. Services: auth, billing, availability
-engine, booking service, notify worker, calendar sync. Data: Postgres on Neon via
+extension). Backend Node.js on Coolify. Services: auth, billing, availability
+engine, booking service, notify worker, calendar sync. Data: Postgres on PostgreSQL via
 Prisma, pg-boss queue.
 
 Non-negotiables: theme app extension not ScriptTags; native checkout via hidden
 variant plus line item properties; store UTC render IANA; Luxon everywhere;
 advisory locks plus unique constraint; pg-boss not Redis; webhooks verify,
-dedupe, 200 fast, async; every query scoped by shopId; Fly not Vercel; Shopify
+dedupe, 200 fast, async; every query scoped by shopId; isolated Coolify app/database; Shopify
 App Pricing; widget CSS scoped under one root id; mobile-first.
 
 ---
@@ -138,8 +138,8 @@ phase, then diff structure, states and copy.
 
 # PART 6 — DATA MODEL
 
-17 models in prisma/schema.prisma. Key constraints: unique (staffId, startAt,
-status) on Booking for race safety; unique (shopId, slug) on Service; unique
+24 models in prisma/schema.prisma. Postgres advisory locks protect group capacity;
+reservation/order-line/idempotency uniqueness prevents duplicate conversions; unique (shopId, slug) on Service; unique
 (shopId, forDate) on InsightsSnapshot.
 
 ---
@@ -161,7 +161,7 @@ Limits: you clone the frontend contract only.
 
 # PART 8 — ENVIRONMENT SETUP
 
-Node 22.19+, pnpm, Shopify CLI, flyctl, Claude Code. .env.example and
+Node 22.19+, pnpm, Shopify CLI, Coolify, Claude Code. .env.example and
 shopify.app.toml are in the repo. API version pinned to 2026-07. .mcp.json
 registers rea and shopify-dev project-wide.
 
@@ -200,8 +200,8 @@ Each phase ends with: green tests, typecheck, 4 breakpoints verified, deployed.
 
 # PART 12 — COST
 
-Setup about 15 USD. Monthly about 108-165 USD including Claude Code Max, Fly.io,
-Neon, Resend, Anthropic and domain. Shopify takes 0% of the first 1M USD per
+Setup about 15 USD. Monthly about 108-165 USD including Claude Code Max, Coolify,
+PostgreSQL, Resend, Anthropic and domain. Shopify takes 0% of the first 1M USD per
 year, 15% after.
 
 ---
@@ -231,17 +231,19 @@ Luxon https://moment.github.io/luxon/
 
 # PART 15 — TRACKER
 
-[ ] Part 3 credentials
-[ ] Phase 0 extraction
-[ ] Phase 1 scaffold
-[ ] Phase 2 data model
-[ ] Phase 3 engine
-[ ] Phase 4 widget
-[ ] Phase 5 checkout
-[ ] Phase 6 notifications
-[ ] Phase 7 calendar
-[ ] Phase 8 bookings views
-[ ] Phase 9 insights
-[ ] Phase 10 launch
+[ ] Part 3 credentials — infrastructure/email/Google supplied; Shopify app identity recovered; live validation pending
+[x] Phase 0 extraction — static contract captured; live cart capture remains unverified
+[ ] Phase 1 scaffold — auth, sessions, tenant access, web/worker runtime implemented; production build/deployment blocked
+[ ] Phase 2 data model — CRUD, schedules, intake, team and settings implemented; generated migrations not applied
+[ ] Phase 3 engine — 38 pure-engine tests pass; coverage percentage not measured
+[ ] Phase 4 widget — inline/popup, featured/collection cards, three themes, custom calendar/week/timezone/slots/intake implemented; visual parity and responsive acceptance pending
+[ ] Phase 5 checkout — free, native cart, deposits, durable webhooks and payment-review recovery implemented; two PostgreSQL race tests and live checkout pending
+[ ] Phase 6 notifications — durable email outbox, reminders and retry UI implemented; sender/live-delivery verification pending
+[ ] Phase 7 calendar — OAuth, busy reads, event writes and encryption implemented; live Google OAuth/sync verification pending
+[ ] Phase 8 bookings views — four views, filters, details, CSV, check-in and Team Portal implemented; browser acceptance pending
+[ ] Phase 9 insights — metrics and optional daily AI summary implemented; provider key and live generation pending
+[ ] Phase 10 launch — hosted-plan verification and consented seat metering implemented; Partner setup, plan limits, billing validation and release gates pending
 
-One phase at a time. /clear between phases.
+Local checkpoint: 298 tests passed, 2 database integration tests skipped; TypeScript
+and Prisma validation passed. No phase is declared launch-complete without its
+external acceptance checks. README documents exact configuration and remaining work.

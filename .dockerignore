@@ -1,0 +1,13 @@
+.git
+node_modules
+.env
+.env.*
+!.env.example
+.cache
+.react-router
+.shopify
+docs/recon/bundles
+docs/recon/*.json
+docs/parity
+coverage
+*.log

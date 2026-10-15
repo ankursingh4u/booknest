@@ -33,5 +33,24 @@ Luxon so a 09:00 rule stays 09:00 local across a DST boundary.
 14. time-off request overlapping a rule
 
 ## Race safety (outside the engine)
-Postgres advisory lock on (staffId, startAt) plus a unique constraint on
-(staffId, startAt, status) for active statuses.
+
+Take PostgreSQL transaction advisory locks for every affected (shopId, staffId),
+in stable sorted order. Locking the entire Availability also covers overlaps
+between different start times and services. Re-read bookings and unexpired
+reservations while holding the lock, then write the hold or booking.
+
+The old unique(staffId, startAt, status) constraint was removed because it
+incorrectly forbids group bookings and does not prevent overlapping intervals.
+Unique shop/idempotency keys, reservation-to-booking identity, and order-line
+identity prevent duplicate requests and webhook conversions. Quantity and time
+ordering have SQL check constraints.
+
+21 pure-engine tests pass. Two opt-in PostgreSQL tests exercise 20 competing
+holds and 20 retries of one booking. They are not yet run against a database.
+
+Paid conversion and order cancellation share a shop/order advisory lock.
+Order locks are acquired before Availability locks to prevent lock-order
+deadlocks. Cancellation waits for any in-flight paid conversion before reading
+bookings; the durable cancellation receipt prevents subsequent paid conversions
+from confirming the order. Booking mutations also compare the current status,
+Availability, and start time so a stale reschedule cannot revive a cancellation.

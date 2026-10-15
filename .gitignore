@@ -13,3 +13,7 @@ docs/parity/*.json
 docs/recon/*.json
 docs/recon/bundles
 coverage
+
+.cache
+.react-router
+!docs/recon/FRONTEND_CONTRACT.json

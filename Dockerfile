@@ -1,9 +1,9 @@
 FROM node:22-alpine AS base
 WORKDIR /app
-RUN corepack enable
+RUN apk add --no-cache openssl && corepack enable
 
 FROM base AS deps
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 FROM base AS build
@@ -16,6 +16,8 @@ ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
 COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/app ./app
+COPY --from=build /app/scripts ./scripts
 COPY package.json ./
 EXPOSE 3000
-CMD ["pnpm", "start"]
+CMD ["sh", "-c", "pnpm db:deploy && exec node scripts/start.mjs"]

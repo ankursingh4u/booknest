@@ -19,6 +19,7 @@ model Shop {
   plan        Plan     @default(FREE)
   trialEndsAt DateTime?
   onboardedAt DateTime?
+  uninstalledAt DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -31,8 +32,14 @@ model Shop {
   insights     InsightsSnapshot[]
   waitlist     WaitlistEntry[]
   subscription Subscription?
+  seatUsage SeatUsage[]
 
   @@index([domain])
+  reservations Reservation[]
+  webhookReceipts WebhookReceipt[]
+  notificationTasks NotificationTask[]
+  googleOAuthStates GoogleOAuthState[]
+  additionalHours AdditionalHours[]
 }
 
 enum Plan {
@@ -43,6 +50,9 @@ enum Plan {
 }
 
 model Subscription {
+  shopifyShopGid String?
+  currentPeriodStart DateTime?
+  seatMeterActive Boolean @default(false)
   id               String    @id @default(cuid())
   shopId           String    @unique
   shop             Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
@@ -55,6 +65,11 @@ model Subscription {
 }
 
 model TeamSeat {
+  billingConsentAt DateTime?
+  usage SeatUsage[]
+  inviteTokenHash String? @unique
+  inviteExpiresAt DateTime?
+  sessionVersion Int @default(0)
   id        String   @id @default(cuid())
   shopId    String
   shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
@@ -81,6 +96,8 @@ model Location {
   blackouts Blackout[]
 
   @@index([shopId])
+  reservations Reservation[]
+  additionalHours AdditionalHours[]
 }
 
 model StaffMember {
@@ -98,6 +115,7 @@ model StaffMember {
   active             Boolean  @default(true)
   googleRefreshToken String?
   googleCalendarId   String?
+  googleSyncError    String?
   createdAt          DateTime @default(now())
 
   locationIds  String[]
@@ -108,6 +126,9 @@ model StaffMember {
   timeOff      TimeOffRequest[]
 
   @@index([shopId, active])
+  reservations Reservation[]
+  googleOAuthStates GoogleOAuthState[]
+  additionalHours AdditionalHours[]
 }
 
 model TimeOffRequest {
@@ -133,6 +154,9 @@ model Service {
   slug           String
   description    String?
   durationMin    Int
+  slotIntervalMin Int?
+  customerCancelCutoffHours Int @default(0)
+  customerRescheduleCutoffHours Int @default(0)
   bufferBefore   Int         @default(0)
   bufferAfter    Int         @default(0)
   capacity       Int         @default(1)
@@ -154,6 +178,7 @@ model Service {
 
   @@unique([shopId, slug])
   @@index([shopId, active])
+  reservations Reservation[]
 }
 
 enum DepositType {
@@ -187,6 +212,26 @@ model AvailabilityRule {
   @@index([shopId, staffId, weekday])
 }
 
+
+/** Explicit extra opening hours for one date; weekly rules remain in effect. */
+model AdditionalHours {
+  id         String @id @default(cuid())
+  shopId     String
+  shop       Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  staffId    String?
+  staff      StaffMember? @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  startAt    DateTime
+  endAt      DateTime
+  timezone   String
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([shopId, locationId, startAt])
+  @@index([shopId, staffId, startAt])
+}
+
 model Blackout {
   id         String       @id @default(cuid())
   shopId     String
@@ -213,6 +258,14 @@ model Booking {
   locationId      String
   location        Location      @relation(fields: [locationId], references: [id])
 
+  quantity        Int @default(1)
+  idempotencyKey  String?
+  reservationId  String? @unique
+  reservation    Reservation? @relation(fields: [reservationId], references: [id])
+  paidCents      Int @default(0)
+  priceCents     Int @default(0)
+  currency       String @default("USD")
+  orderLineId    String?
   orderId         String?
   customerId      String?
   customerEmail   String
@@ -225,9 +278,11 @@ model Booking {
 
   notes           String?
   source          String        @default("widget")
-  rescheduleToken String        @unique @default(cuid())
-  cancelToken     String        @unique @default(cuid())
+  rescheduleToken String        @unique @default(uuid())
+  cancelToken     String        @unique @default(uuid())
   googleEventId   String?
+  googleEventStaffId String?
+  googleEventCalendarId String?
   checkedInAt     DateTime?
   checkedInBy     String?
   contactLink     String?
@@ -238,10 +293,12 @@ model Booking {
   answers IntakeAnswer[]
   jobs    JobLog[]
 
-  @@unique([staffId, startAt, status])
+  @@unique([shopId, idempotencyKey])
+  @@unique([shopId, orderLineId])
   @@index([shopId, status, startAt])
   @@index([shopId, startAt])
   @@index([orderId])
+  notificationTasks NotificationTask[]
 }
 
 enum BookingStatus {
@@ -250,6 +307,7 @@ enum BookingStatus {
   CANCELLED
   COMPLETED
   NO_SHOW
+  NEEDS_REVIEW
 }
 
 model IntakeQuestion {
@@ -262,6 +320,7 @@ model IntakeQuestion {
   required  Boolean  @default(false)
   options   String[]
   sortOrder Int      @default(0)
+  active Boolean @default(true)
 }
 
 model IntakeAnswer {
@@ -320,4 +379,119 @@ model WaitlistEntry {
   notifiedAt    DateTime?
   createdAt     DateTime  @default(now())
   @@index([shopId, serviceId])
+}
+
+/** Shopify authentication sessions. Accessed only by the private SDK adapter. */
+model Session {
+  id            String   @id
+  shop          String
+  state         String
+  isOnline      Boolean  @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  refreshToken  String?
+  refreshTokenExpires DateTime?
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean  @default(false)
+  locale        String?
+  collaborator  Boolean? @default(false)
+  emailVerified Boolean? @default(false)
+
+  @@index([shop])
+}
+
+model Reservation {
+  id             String   @id @default(uuid())
+  shopId         String
+  shop           Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  serviceId      String
+  service        Service @relation(fields: [serviceId], references: [id])
+  staffId        String
+  staff          StaffMember @relation(fields: [staffId], references: [id])
+  locationId     String
+  location       Location @relation(fields: [locationId], references: [id])
+  startAt        DateTime
+  endAt          DateTime
+  quantity       Int @default(1)
+  expiresAt      DateTime
+  idempotencyKey String
+  priceCents     Int
+  dueCents       Int @default(0)
+  depositType    DepositType @default(NONE)
+  answers        Json @default("[]")
+  checkoutId     String?
+  checkoutUrl    String?
+  checkoutStartedAt DateTime?
+  currency       String
+  variantId      String?
+  createdAt      DateTime @default(now())
+  booking        Booking?
+  @@unique([shopId, idempotencyKey])
+  @@index([shopId, staffId, expiresAt])
+}
+
+model WebhookReceipt {
+  id          String @id @default(uuid())
+  shopId      String
+  shop        Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  externalId  String
+  topic       String
+  payload     Json
+  processedAt DateTime?
+  attempts Int @default(0)
+  lastError   String?
+  createdAt   DateTime @default(now())
+  @@unique([shopId, externalId])
+  @@index([processedAt, createdAt])
+}
+
+model NotificationTask {
+  id String @id @default(uuid())
+  shopId String
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  bookingId String
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  kind String
+  dedupeKey String @unique
+  expectedStartAt DateTime
+  runAt DateTime
+  completedAt DateTime?
+  attempts Int @default(0)
+  lastError String?
+  createdAt DateTime @default(now())
+  @@index([completedAt, runAt])
+}
+
+model GoogleOAuthState {
+  id String @id @default(uuid())
+  shopId String
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  staffId String
+  staff StaffMember @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  nonceHash String
+  verifier String
+  expiresAt DateTime
+  usedAt DateTime?
+  @@index([expiresAt])
+}
+
+model SeatUsage {
+  id String @id @default(uuid())
+  shopId String
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  seatId String
+  seat TeamSeat @relation(fields: [seatId], references: [id], onDelete: Cascade)
+  shopifyShopGid String
+  periodStart DateTime
+  periodEnd DateTime
+  occurredAt DateTime
+  submittedAt DateTime?
+  attempts Int @default(0)
+  lastError String?
+  @@unique([shopId, seatId, periodStart])
+  @@index([submittedAt, attempts])
 }

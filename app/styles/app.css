@@ -1,0 +1,71 @@
+:root {
+  --bn-space-1: 4px; --bn-space-2: 8px; --bn-space-3: 12px; --bn-space-4: 16px;
+  --bn-space-6: 24px; --bn-space-8: 32px;
+  --bn-radius: 10px; --bn-font-body: 16px; --bn-font-heading: 28px; --bn-touch: 44px;
+}
+#booknest-admin { min-height: 100vh; }
+#booknest-admin button, #booknest-admin input, #booknest-admin .bn-primary-link {
+  min-height: var(--bn-touch);
+}
+#booknest-admin a:focus-visible, #booknest-admin button:focus-visible,
+#booknest-admin input:focus-visible { outline: 2px solid #2150eb; outline-offset: var(--bn-space-1); }
+.bn-login { min-height: 100vh; display: grid; place-items: center; padding: var(--bn-space-4); }
+.bn-login-card { width: 100%; max-width: 480px; background: white; border: 1px solid #d5d9dd;
+  border-radius: var(--bn-radius); padding: var(--bn-space-6); font-size: var(--bn-font-body); }
+.bn-login-card h1 { font-size: var(--bn-font-heading); line-height: 1.2; margin: 0 0 var(--bn-space-4); }
+.bn-login-card p { margin: 0 0 var(--bn-space-4); }
+.bn-login-card form { display: grid; gap: var(--bn-space-3); }
+.bn-login-card input { width: 100%; box-sizing: border-box; border: 1px solid #8a9199;
+  border-radius: 6px; padding: var(--bn-space-3); font: inherit; }
+.bn-login-card button, .bn-primary-link { display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 6px; padding: var(--bn-space-3) var(--bn-space-4);
+  background: #202223; color: white; font: inherit; text-decoration: none; }
+.bn-login-card button:disabled { opacity: 0.6; }
+.bn-eyebrow { font-weight: 600; }
+.bn-status { position: fixed; bottom: var(--bn-space-4); right: var(--bn-space-4); }
+@media (min-width: 768px) { .bn-login-card { padding: var(--bn-space-8); } }
+@media (prefers-reduced-motion: reduce) { #booknest-admin *, #booknest-admin *::before, #booknest-admin *::after {
+  animation-duration: 0.01ms !important; transition-duration: 0.01ms !important;
+} }
+
+#booknest-admin select, #booknest-admin textarea { min-height: var(--bn-touch); font: inherit; }
+.bn-form { display: grid; gap: var(--bn-space-4); }
+.bn-field { display: grid; gap: var(--bn-space-2); min-width: 0; }
+.bn-field label, .bn-options legend { font-weight: 600; }
+.bn-field input, .bn-field textarea, .bn-field select {
+  width: 100%; box-sizing: border-box; color: var(--p-color-text, #202223); background: var(--p-color-bg-surface, white);
+  border: 1px solid var(--p-color-border, #8a9199); border-radius: 6px; padding: var(--bn-space-2) var(--bn-space-3); font: inherit;
+}
+.bn-field :focus-visible, .bn-options :focus-visible { outline: 2px solid var(--p-color-border-focus, #2150eb); outline-offset: var(--bn-space-1); }
+.bn-options { border: 1px solid var(--p-color-border, #d5d9dd); border-radius: 6px; padding: var(--bn-space-3); }
+.bn-options label { display: flex; align-items: center; min-height: var(--bn-touch); gap: var(--bn-space-2); }
+#booknest-admin .bn-options input { min-height: 20px; width: 20px; }
+.bn-editor-layout, .bn-form-grid { display: grid; gap: var(--bn-space-4); align-items: start; }
+.bn-record, .bn-heading-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--bn-space-4); }
+.bn-record { padding-block: var(--bn-space-4); border-bottom: 1px solid var(--p-color-border, #d5d9dd); }
+.bn-record p { margin-block: var(--bn-space-2); overflow-wrap: anywhere; }
+.bn-record a, .bn-heading-row a { display: inline-flex; align-items: center; min-height: var(--bn-touch); font-weight: 600; }
+.bn-error { color: var(--p-color-text-critical, #b42318); }
+@media (min-width: 480px) { .bn-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 768px) { .bn-editor-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); } }
+@media (min-width: 1024px) { .bn-editor-layout { gap: var(--bn-space-6); } }
+@media (min-width: 1280px) { .bn-editor-layout { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); } }
+
+.bn-calendar { display: grid; gap: var(--bn-space-2); }
+.bn-calendar-day { background: white; border: 1px solid #d5d9dd; border-radius: var(--bn-radius); padding: var(--bn-space-3); min-width: 0; }
+.bn-calendar-day h2, .bn-booking-group > h2 { font-weight: 600; margin-bottom: var(--bn-space-3); }
+.bn-calendar-padding { display: none; }
+.bn-calendar-booking { display: grid; gap: var(--bn-space-1); padding: var(--bn-space-2); margin-block: var(--bn-space-2); background: #eef3ff; color: #173b82; border-radius: 6px; text-decoration: none; overflow-wrap: anywhere; min-height: var(--bn-touch); }
+#booknest-admin summary { min-height: var(--bn-touch); cursor: pointer; padding-block: var(--bn-space-3); }
+#booknest-admin [aria-current="page"] { text-decoration: underline; text-underline-offset: var(--bn-space-2); }
+@media (min-width: 480px) { .bn-calendar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 768px) { .bn-calendar { grid-template-columns: repeat(7, minmax(0, 1fr)); } .bn-calendar-padding { display: block; opacity: 0.5; } }
+
+.bn-team { max-width: 1024px; margin-inline: auto; padding: var(--bn-space-4); display: grid; gap: var(--bn-space-6); font-size: var(--bn-font-body); }
+.bn-team h1 { font-size: var(--bn-font-heading); line-height: 1.3; }
+.bn-team h2 { font-weight: 700; font-size: 20px; margin-bottom: var(--bn-space-4); }
+.bn-team-card { background: white; border: 1px solid #d5d9dd; padding: var(--bn-space-4); border-radius: var(--bn-radius); }
+.bn-team button { padding: var(--bn-space-2) var(--bn-space-4); border-radius: 6px; border: 1px solid #8a9199; cursor: pointer; min-height: var(--bn-touch); }
+.bn-team p { margin-block: var(--bn-space-2); overflow-wrap: anywhere; }
+
+.bn-metric { font-size: var(--bn-font-heading); font-weight: 700; margin-block: var(--bn-space-3); }

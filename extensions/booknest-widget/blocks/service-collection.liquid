@@ -1,0 +1,17 @@
+<div id="bn-booking-root-{{ block.id }}" data-booknest data-surface="collection" data-block-id="{{ block.id }}" data-mode="popup" data-theme="{{ block.settings.theme }}" data-accent="{{ block.settings.accent }}" data-button-label="{{ block.settings.button_label | escape }}" {{ block.shopify_attributes }}>
+  <p role="status">Loading appointments…</p>
+  <noscript>Please enable JavaScript to book an appointment, or contact the store.</noscript>
+</div>
+{% schema %}
+{
+  "name": "BookNest service collection",
+  "target": "section",
+  "javascript": "booknest.js",
+  "stylesheet": "booknest.css",
+  "settings": [
+    { "type": "select", "id": "theme", "label": "Theme", "default": "classic", "options": [{ "value": "classic", "label": "Classic" }, { "value": "contrast", "label": "High contrast" }, { "value": "minimal", "label": "Minimal" }] },
+    { "type": "color", "id": "accent", "label": "Accent", "default": "#253f8e" },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "Book a time" }
+  ]
+}
+{% endschema %}

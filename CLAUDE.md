@@ -7,7 +7,7 @@ storefront widget. Bookings materialise from Shopify orders.
 
 ## Stack
 TypeScript (strict) · React Router 7 + Polaris + App Bridge · Prisma + PostgreSQL
-· Luxon · pg-boss · Resend · Vitest · Fly.io
+· Luxon · pg-boss · Resend · Vitest · Coolify
 
 ## Hard rules
 1. NEVER use `new Date()` arithmetic for timezones. Use Luxon.
@@ -27,7 +27,7 @@ TypeScript (strict) · React Router 7 + Polaris + App Bridge · Prisma + Postgre
 15. Call staff "Availabilities" in UI copy. Call services "Events/Services".
 
 ## Commands
-pnpm dev · pnpm test · pnpm typecheck · pnpm db:migrate · pnpm db:studio · fly deploy
+pnpm dev · pnpm test · pnpm typecheck · pnpm db:deploy · pnpm db:studio
 
 ## Conventions
 - `*.server.ts` for server-only modules
@@ -44,3 +44,21 @@ pnpm dev · pnpm test · pnpm typecheck · pnpm db:migrate · pnpm db:studio · 
 [ ] keyboard navigable, a11y >= 95
 [ ] error, empty and loading states handled
 [ ] deployed and manually verified on the dev store
+
+## Continuation status (2026-10-15)
+
+- The user explicitly requested taking over Claude's work, proceeding from available evidence, and completing the app. Do not restart extraction or repeat blocked setup attempts.
+- Hosting override: existing Coolify VPS, isolated BookNest app/database, booknestapp.site. Leave other apps alone.
+- Phase 0 contract committed as 296030f. Static bundle evidence is extracted; interrupted live cart capture never completed.
+- Core implementation now spans auth, tenant access, catalog/schedules, availability, storefront checkout, webhooks, customer portal, notifications, calendar, booking views/export, Team Portal, insights, and hosted-plan/seat billing. See README for exact scope and release gaps.
+- 298 tests pass. TypeScript and Prisma validation pass. Two PostgreSQL race tests require BOOKNEST_TEST_DATABASE_URL and are skipped. Coverage percentage and browser accessibility are not measured.
+- Shopify session and booking/calendar/team/billing migrations are generated but have not been applied to any live database.
+- Shopify credentials are present in the ignored local environment file, extracted from the supplied history; they have not been live-validated. Never print or copy secrets into tracked files or notes.
+- Build is blocked by missing @react-router/dev, @react-router/serve, and Vite plus denied package network access. pnpm-lock.yaml needs regeneration. Docker temporarily uses --no-frozen-lockfile; restore frozen installation after regeneration.
+- The saved Coolify token and exact isolated BookNest resource IDs are configured in ignored .env. Direct deployment script is implemented and mocked. Node HTTPS fails EACCES; native clients also cannot connect. No push, deployment, live migration, or browser verification has occurred. GitHub connector is read-only; direct-source Coolify deployment does not need GitHub.
+- Billing enforcement and seat metering remain disabled until hosted plans, Partner API access, and the monthly $8 usage meter are configured and verified. No feature-limit matrix was supplied; do not invent one.
+- Admin and Partner API version remains 2026-07. App Events uses its separately documented unstable endpoint.
+- Existing tests use installed local packages and can run directly through Node when shell execution is unavailable. Avoid repeated shell, network, or browser setup loops.
+
+- Latest parity work adds owned Shopify product creation/publication, custom calendar/week controls, viewer timezones, current variant binding and checkout gating, safe paid cart retry, slot intervals, customer cutoffs under locks, and additional date-specific hours. Extra hours are explicit additive windows; exact original override semantics were not observed.
+- Deployment: node scripts/package-release.mjs, then node --env-file=.env scripts/deploy-coolify.mjs --execute. The preparation mode omits --execute. No deployment credentials enter the source archive or app container.

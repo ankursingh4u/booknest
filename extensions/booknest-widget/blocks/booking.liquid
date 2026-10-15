@@ -1,0 +1,19 @@
+<div id="bn-booking-root-{{ block.id }}" data-booknest data-block-id="{{ block.id }}" data-service-id="{{ block.settings.service_id | escape }}" data-variant-id="{{ product.selected_or_first_available_variant.id }}" data-product-variants="{% if product %}{% for variant in product.variants %}{{ variant.id }}{% unless forloop.last %},{% endunless %}{% endfor %}{% endif %}" data-mode="{{ block.settings.mode }}" data-theme="{{ block.settings.theme }}" data-accent="{{ block.settings.accent }}" data-button-label="{{ block.settings.button_label | escape }}" {{ block.shopify_attributes }}>
+  <p role="status">Loading booking times…</p>
+  <noscript>Please enable JavaScript to book an appointment, or contact the store.</noscript>
+</div>
+{% schema %}
+{
+  "name": "BookNest booking",
+  "target": "section",
+  "javascript": "booknest.js",
+  "stylesheet": "booknest.css",
+  "settings": [
+    { "type": "text", "id": "service_id", "label": "Event/Service ID", "info": "On a product page, the currently selected variant determines the linked service. Elsewhere, enter a service ID or leave blank for all services." },
+    { "type": "select", "id": "mode", "label": "Display", "default": "popup", "options": [{ "value": "popup", "label": "Popup" }, { "value": "inline", "label": "Inline" }] },
+    { "type": "select", "id": "theme", "label": "Theme", "default": "classic", "options": [{ "value": "classic", "label": "Classic" }, { "value": "contrast", "label": "High contrast" }, { "value": "minimal", "label": "Minimal" }] },
+    { "type": "color", "id": "accent", "label": "Accent", "default": "#253f8e" },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "Book a time" }
+  ]
+}
+{% endschema %}
