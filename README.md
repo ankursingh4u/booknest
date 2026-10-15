@@ -32,7 +32,7 @@ Use Node 22.19+ and the pnpm version pinned in package.json.
 5. Run `pnpm dev` with Shopify CLI, or `pnpm dev:web` for the web server.
 6. Run `node --env-file=.env --import tsx app/worker.server.ts` alongside the web server for webhooks, notifications, calendar updates, and seat billing.
 
-Production is intended for the user's existing Coolify VPS at **booknestapp.site**, using a separate BookNest app and PostgreSQL database. Leave all other hosted apps and databases unchanged.
+Production is intended for the user's existing Coolify VPS at **app.booknestapp.live**, using a separate BookNest app and PostgreSQL database. Leave all other hosted apps and databases unchanged.
 
 ## Direct Coolify deployment
 
@@ -83,7 +83,7 @@ References: [Shopify App Pricing](https://shopify.dev/docs/apps/launch/billing/s
 ## Email, calendar, and insights
 
 - Configure Resend with a verified EMAIL_FROM. The worker handles confirmation, reschedule, cancellation, and 24-hour/1-hour reminders. Support exposes failed deliveries for retry.
-- Register Google's redirect URI as `https://booknestapp.site/auth/google/callback`. Keep SESSION_SECRET stable: it encrypts refresh tokens and signs team sessions. Connect calendars from the merchant's Google Calendar page.
+- Register Google's redirect URI as `https://app.booknestapp.live/auth/google/callback`. Keep SESSION_SECRET stable: it encrypts refresh tokens and signs team sessions. Connect calendars from the merchant's Google Calendar page.
 - Calendar reads exclude matching BookNest events to avoid double-counting group capacity. External calendar edits block availability; they do not automatically reschedule BookNest appointments.
 - Set ANTHROPIC_API_KEY to enable daily AI summaries; ANTHROPIC_MODEL is configurable. Only aggregate counts and amounts are sent. Without it, metrics and a clearly labeled deterministic summary work.
 - Deposit checkout collects the configured deposit. Remaining balances and refunds are handled by the merchant through Shopify; no automatic remaining-balance charge or refund is claimed.

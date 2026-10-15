@@ -48,7 +48,7 @@ pnpm dev · pnpm test · pnpm typecheck · pnpm db:deploy · pnpm db:studio
 ## Continuation status (2026-10-15)
 
 - The user explicitly requested taking over Claude's work, proceeding from available evidence, and completing the app. Do not restart extraction or repeat blocked setup attempts.
-- Hosting override: existing Coolify VPS, isolated BookNest app/database, booknestapp.site. Leave other apps alone.
+- Hosting override: existing Coolify VPS, isolated BookNest app/database, app.booknestapp.live. Leave other apps alone.
 - Phase 0 contract committed as 296030f. Static bundle evidence is extracted; interrupted live cart capture never completed.
 - Core implementation now spans auth, tenant access, catalog/schedules, availability, storefront checkout, webhooks, customer portal, notifications, calendar, booking views/export, Team Portal, insights, and hosted-plan/seat billing. See README for exact scope and release gaps.
 - 298 tests pass. TypeScript and Prisma validation pass. Two PostgreSQL race tests require BOOKNEST_TEST_DATABASE_URL and are skipped. Coverage percentage and browser accessibility are not measured.

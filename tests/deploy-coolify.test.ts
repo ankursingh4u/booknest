@@ -21,7 +21,7 @@ const env = {
   COOLIFY_PROJECT_UUID: "project-12345678", COOLIFY_ENVIRONMENT_UUID: "environment-12345678",
   COOLIFY_SERVER_UUID: "server-12345678", COOLIFY_DATABASE_UUID: "database-12345678",
   SHOPIFY_API_KEY: "fixture-shopify-id", SHOPIFY_API_SECRET: "fixture-shopify-secret-never-log",
-  SHOPIFY_APP_URL: "https://booknestapp.site", SESSION_SECRET: "fixture-session-secret-at-least-thirty-two-characters",
+  SHOPIFY_APP_URL: "https://app.booknestapp.live", SESSION_SECRET: "fixture-session-secret-at-least-thirty-two-characters",
   SCOPES: "read_products,write_products,read_publications,write_publications",
 };
 const target = validateTarget(env);

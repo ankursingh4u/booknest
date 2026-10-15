@@ -2,7 +2,9 @@
 
 Date: 2026-10-15
 
-The authorized target is the existing BookNest project, production environment, server and isolated booknest-db database, with https://booknestapp.site as the application domain. The available GitHub connector cannot push code. The supplied Coolify API token and resource IDs are recovered from the original user messages and saved only in ignored local .env.
+The authorized target is the existing BookNest project, production environment, server and isolated booknest-db database, with https://app.booknestapp.live as the application domain. The supplied Coolify API token and resource IDs are recovered from the original user messages and saved only in ignored local .env.
+
+Update (2026-10-15): the original inline-Dockerfile source-embedding approach failed in practice — Coolify's own mechanism for writing an inline Dockerfile to the build server passes the entire file as a single shell argument, which exceeds Linux's ~128KB single-argument ceiling (MAX_ARG_STRLEN) once the source tarball is base64-embedded and double-wrapped. BookNest now deploys via a standard git-based Coolify application pointing at a public GitHub repository (github.com/ankursingh4u/booknest), which has no such size ceiling since Coolify clones the repository directly on the server.
 
 ## Decision
 
