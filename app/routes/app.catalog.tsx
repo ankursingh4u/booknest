@@ -3,7 +3,7 @@ import { z } from "zod";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { data, Form, Link, redirect, useActionData, useLoaderData, useLocation, useSearchParams } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { Page, Card, BlockStack, Text, Badge, Banner, RadioButton, TextField, Button } from "@shopify/polaris";
+import { Page, Card, BlockStack, Text, Badge, Banner, RadioButton, TextField, Button, Tabs, EmptyState } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
 import { catalogData, catalogKind, mutateCatalog } from "../lib/admin/catalog.server";
 import { formError } from "../lib/admin/errors.server";
@@ -51,17 +51,28 @@ export default function Catalog() {
   const value = { ...edit?.values, ...submitted?.values };
   const field = (name: string, label: string, type = "text", fallback = "", required = false, help?: string) =>
     <Field name={name} label={label} type={type} value={value[name] ?? fallback} required={required} help={help} errors={result?.fields[name]} step={type === "number" ? "1" : undefined} />;
+  const noun = kind === "services" ? "Event/Service" : kind === "availabilities" ? "Availability" : "location";
+  const [tab, setTab] = useState<"active" | "archived">("active");
+  const [query, setQuery] = useState("");
+  const visible = rows.filter(row => (tab === "active" ? row.active : !row.active)
+    && (query === "" || row.title.toLowerCase().includes(query.toLowerCase()) || row.summary.toLowerCase().includes(query.toLowerCase())));
   return <Page title={title}><BlockStack gap="400">
     {search.has("saved") && !result && <Banner tone="success">Changes saved.</Banner>}
     {result && <Banner tone="critical"><p>{result.error}</p>{Object.entries(result.fields).map(([name, errors]) => errors?.map(error => <p key={name + error}>{name}: {error}</p>))}</Banner>}
-    <div className="bn-editor-layout"><Card><BlockStack gap="400">
-      <div className="bn-heading-row"><Text as="h2" variant="headingMd">{title}</Text><Link to={"?new=1"}>Add new</Link></div>
-      {!rows.length && <Text as="p" tone="subdued">Add your first {kind === "services" ? "Event/Service" : kind === "availabilities" ? "Availability" : "location"} to get started.</Text>}
-      {rows.map(row => <article className="bn-record" key={row.id}>
-        <div><Link to={"?edit=" + row.id}>{row.title}</Link><p>{row.summary}</p>{kind === "services" && <p>Event/Service ID: <code>{row.id}</code></p>}<Badge tone={row.active ? "success" : undefined}>{row.active ? "Active" : "Archived"}</Badge></div>
-        <RecordAction id={row.id} intent={row.active ? "archive" : "restore"}>{row.active ? "Archive" : "Restore"}</RecordAction>
-      </article>)}
-      {rows.length >= 500 && <Text as="p">Showing the first 500 records.</Text>}
+    <div className="bn-editor-layout"><Card padding="0"><BlockStack gap="0">
+      <div className="bn-heading-row" style={{ padding: "var(--bn-space-4)" }}><Text as="h2" variant="headingMd">{title}</Text><Button variant="primary" url="?new=1">+ Create</Button></div>
+      <Tabs tabs={[{ id: "active", content: "Active" }, { id: "archived", content: "Archived" }]} selected={tab === "active" ? 0 : 1} onSelect={index => setTab(index === 0 ? "active" : "archived")} />
+      <div style={{ padding: "var(--bn-space-4)" }}><TextField label="Search" labelHidden value={query} onChange={setQuery} placeholder={"Search by name or email"} autoComplete="off" /></div>
+      {!visible.length ? <div style={{ padding: "var(--bn-space-4)" }}><EmptyState heading={rows.length ? "No matches" : "Add your first " + noun.toLowerCase()}
+        image="https://cdn.shopify.com/s/files/1/0757/9955/files/empty-state.svg" action={rows.length ? undefined : { content: "+ Create", url: "?new=1" }}>
+        <p>{rows.length ? "Try a different search or switch tabs." : "Get started by adding a " + noun.toLowerCase() + "."}</p>
+      </EmptyState></div> : <BlockStack gap="0">
+        {visible.map(row => <article className="bn-record" key={row.id} style={{ padding: "0 var(--bn-space-4)" }}>
+          <div><Link to={"?edit=" + row.id}>{row.title}</Link><p>{row.summary}</p>{kind === "services" && <p>Event/Service ID: <code>{row.id}</code></p>}<Badge tone={row.active ? "success" : undefined}>{row.active ? "Active" : "Archived"}</Badge></div>
+          <RecordAction id={row.id} intent={row.active ? "archive" : "restore"}>{row.active ? "Archive" : "Restore"}</RecordAction>
+        </article>)}
+        {rows.length >= 500 && <Text as="p">Showing the first 500 records.</Text>}
+      </BlockStack>}
     </BlockStack></Card>
     <Card><Form method="post" className="bn-form" key={location.key}>
       <Text as="h2" variant="headingMd">{edit ? "Edit " + edit.title : "Add " + (kind === "services" ? "Event/Service" : kind === "availabilities" ? "Availability" : "location")}</Text>
