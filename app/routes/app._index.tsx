@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { DateTime } from "luxon";
 import { z } from "zod";
-import { Form, Link, redirect, useActionData, useLoaderData, useNavigate, useSearchParams, useRevalidator } from "react-router";
+import { Link, redirect, useActionData, useLoaderData, useNavigate, useSearchParams, useRevalidator } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { Page, Card, BlockStack, Text, Badge, Banner, TextField, Select, Button, Tabs } from "@shopify/polaris";
+import { Page, Card, BlockStack, Text, Badge, Banner, TextField, Select, Button, ButtonGroup, IndexFilters, IndexFiltersMode, useSetIndexFiltersMode, EmptyState } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
 import { cancelBooking } from "../lib/bookings/service.server";
 import { formError } from "../lib/admin/errors.server";
@@ -44,10 +44,8 @@ export default function Bookings() {
   const [search] = useSearchParams();
   const navigate = useNavigate();
   const refresh = useRevalidator();
+  const { mode, setMode } = useSetIndexFiltersMode(IndexFiltersMode.Default);
   const [qValue, setQValue] = useState(q);
-  const [timezoneValue, setTimezoneValue] = useState(timezone);
-  const [staffValue, setStaffValue] = useState(staff);
-  const [serviceValue, setServiceValue] = useState(service);
   const [dayValue, setDayValue] = useState(day);
   const columnOptions = ["customer", "availability", "location", "order"];
   const columns = new Set(search.has("columnsConfigured") ? search.getAll("columns") : columnOptions);
@@ -83,36 +81,58 @@ export default function Bookings() {
       <Link to="/app/manage/availabilities">{setup.staff ? "✓" : "2."} Add Availabilities</Link>
       <Link to="/app/schedules">3. Set working hours</Link><Link to="/app/manage/services">{setup.services ? "✓" : "4."} Create Events/Services</Link>
     </BlockStack></Card>}
-    <Card><BlockStack gap="400"><div className="bn-heading-row"><h2>{insight && insight.model !== "rules-v1" ? "AI insights" : "Booking insights"}</h2><Link to="/app/insights">View insights</Link></div>
-      {insight ? <><ul>{insight.highlights.map((line, i) => <li key={i}>{line}</li>)}</ul><p>{insight.nudge}</p></> : <p>Review booking trends, cancellations, and your most booked Events/Services.</p>}
-    </BlockStack></Card>
-    <Card><BlockStack gap="400">
-      <div className="bn-heading-row">
-        <Tabs tabs={bookingViews.map(value => ({ id: value, content: title(value) }))} selected={bookingViews.indexOf(view)}
-          onSelect={index => navigate(query({ view: bookingViews[index]!, page: "1" }))} />
+    <Banner tone="info" title={insight && insight.model !== "rules-v1" ? "AI insights" : "Booking insights"}>
+      {insight ? <BlockStack gap="200"><ul>{insight.highlights.map((line, i) => <li key={i}>{line}</li>)}</ul><p>{insight.nudge}</p><Link to="/app/insights">View insights</Link></BlockStack>
+        : <BlockStack gap="200"><p>Review booking trends, cancellations, and your most booked Events/Services.</p><Link to="/app/insights">View insights</Link></BlockStack>}
+    </Banner>
+    <Card padding="0"><BlockStack gap="0">
+      <div className="bn-heading-row" style={{ padding: "var(--bn-space-4)" }}>
+        <ButtonGroup variant="segmented">{bookingViews.map(value => <Button key={value} pressed={view === value} onClick={() => navigate(query({ view: value, page: "1" }))}>{title(value)}</Button>)}</ButtonGroup>
         <Button onClick={() => void refresh.revalidate()} disabled={refresh.state !== "idle"} loading={refresh.state !== "idle"}>{refresh.state === "idle" ? "Refresh" : "Refreshing…"}</Button>
       </div>
-      <Tabs tabs={bookingTabs.map(value => ({ id: value, content: value === "recent" ? "Recently booked" : title(value) }))} selected={bookingTabs.indexOf(tab)}
-        onSelect={index => navigate(query({ tab: bookingTabs[index]!, page: "1" }))} />
-      <Form method="get" className="bn-form"><input type="hidden" name="tab" value={tab} /><input type="hidden" name="view" value={view} />
-        <div className="bn-form-grid">
-          <TextField label="Search" name="q" value={qValue} onChange={setQValue} placeholder="Name, email, booking or order ID" autoComplete="off" />
-          <TextField label="Timezone" name="timezone" value={timezoneValue} onChange={setTimezoneValue} autoComplete="off" />
-          <Select label="Availability" name="staff" value={staffValue} onChange={setStaffValue}
-            options={[{ value: "", label: "All Availabilities" }, ...staffOptions.map(s => ({ value: s.id, label: s.firstName + " " + s.lastName }))]} />
-          <Select label="Event/Service" name="service" value={serviceValue} onChange={setServiceValue}
-            options={[{ value: "", label: "All Events/Services" }, ...serviceOptions.map(s => ({ value: s.id, label: s.title }))]} />
-          {view !== "list" && <TextField label="Date" type="date" name="day" value={dayValue} onChange={setDayValue} autoComplete="off" requiredIndicator />}
-        </div>
-        <details><summary>Visible details</summary><input type="hidden" name="columnsConfigured" value="1" /><fieldset className="bn-options"><legend>Show in booking cards</legend>{columnOptions.map(column => <AdminCheckbox key={column} name="columns" value={column} label={title(column)} defaultChecked={columns.has(column)} />)}</fieldset><p>CSV exports include all details.</p></details>
-        <AdminCheckbox name="hideChecked" value="1" label="Hide checked-in" defaultChecked={hideChecked} />
-        <Button submit variant="primary">Apply filters</Button>
-      </Form>
-      <div className="bn-heading-row"><p>{count} booking(s) · times in {timezone}</p><a href={"/app/bookings.csv" + query({})} download>Export matching bookings</a></div>
-      {view !== "list" && <nav className="bn-heading-row" aria-label="Date range"><Link to={query({ day: move(-1) })}>Previous {view === "calendar" ? "month" : view === "agenda" ? "week" : "day"}</Link><strong>{anchor.toFormat(view === "calendar" ? "LLLL yyyy" : "dd LLL yyyy")}</strong><Link to={query({ day: move(1) })}>Next {view === "calendar" ? "month" : view === "agenda" ? "week" : "day"}</Link></nav>}
-      {view !== "list" && count > limit && <Banner tone="warning">Showing {limit} of {count} bookings. Filter by Availability or Event/Service to see the rest.</Banner>}
+      <IndexFilters
+        mode={mode} setMode={setMode}
+        tabs={bookingTabs.map(value => ({ id: value, content: (value === "recent" ? "Recently booked" : title(value)) }))}
+        selected={bookingTabs.indexOf(tab)} onSelect={index => navigate(query({ tab: bookingTabs[index]!, page: "1" }))}
+        queryValue={qValue} queryPlaceholder="Name, email, booking or order ID"
+        onQueryChange={setQValue} onQueryClear={() => { setQValue(""); navigate(query({ q: "", page: "1" })); }}
+        onQueryBlur={() => navigate(query({ q: qValue, page: "1" }))}
+        onClearAll={() => navigate(query({ q: "", staff: "", service: "", hideChecked: "", page: "1" }))}
+        filters={[
+          { key: "staff", label: "Availability", pinned: true, filter: <Select labelHidden label="Availability" value={staff}
+            onChange={value => navigate(query({ staff: value, page: "1" }))} options={[{ value: "", label: "All Availabilities" }, ...staffOptions.map(s => ({ value: s.id, label: s.firstName + " " + s.lastName }))]} /> },
+          { key: "service", label: "Event/Service", pinned: true, filter: <Select labelHidden label="Event/Service" value={service}
+            onChange={value => navigate(query({ service: value, page: "1" }))} options={[{ value: "", label: "All Events/Services" }, ...serviceOptions.map(s => ({ value: s.id, label: s.title }))]} /> },
+          { key: "hideChecked", label: "Hide checked-in", pinned: true, filter: <AdminCheckbox name="hideChecked" value="1" label="Hide checked-in"
+            defaultChecked={hideChecked} onToggle={checked => navigate(query({ hideChecked: checked ? "1" : "", page: "1" }))} /> },
+        ]}
+        appliedFilters={[
+          ...(staff ? [{ key: "staff", label: "Availability: " + (() => { const match = staffOptions.find(s => s.id === staff); return match ? match.firstName + " " + match.lastName : ""; })(), onRemove: () => navigate(query({ staff: "", page: "1" })) }] : []),
+          ...(service ? [{ key: "service", label: "Event/Service: " + (serviceOptions.find(s => s.id === service)?.title ?? ""), onRemove: () => navigate(query({ service: "", page: "1" })) }] : []),
+          ...(hideChecked ? [{ key: "hideChecked", label: "Hiding checked-in", onRemove: () => navigate(query({ hideChecked: "", page: "1" })) }] : []),
+        ]}
+        canCreateNewView={false}
+      />
+      <div style={{ padding: "var(--bn-space-4)" }}><BlockStack gap="400">
+        {view !== "list" && <TextField label="Date" type="date" value={dayValue} onChange={value => { setDayValue(value); navigate(query({ day: value })); }} autoComplete="off" />}
+        <details><summary>Visible details</summary><fieldset className="bn-options"><legend>Show in booking cards</legend>
+          {columnOptions.map(column => <AdminCheckbox key={column} name="columns" value={column} label={title(column)} defaultChecked={columns.has(column)}
+            onToggle={checked => {
+              const next = new Set(columns); if (checked) next.add(column); else next.delete(column);
+              const params = new URLSearchParams(search); params.delete("saved"); params.delete("columns");
+              params.set("columnsConfigured", "1"); for (const value of next) params.append("columns", value);
+              navigate("?" + params);
+            }} />)}
+        </fieldset><p>CSV exports include all details.</p></details>
+        <div className="bn-heading-row"><p>{count} booking(s) · times in {timezone}</p><a href={"/app/bookings.csv" + query({})} download>Export matching bookings</a></div>
+        {view !== "list" && <nav className="bn-heading-row" aria-label="Date range"><Link to={query({ day: move(-1) })}>Previous {view === "calendar" ? "month" : view === "agenda" ? "week" : "day"}</Link><strong>{anchor.toFormat(view === "calendar" ? "LLLL yyyy" : "dd LLL yyyy")}</strong><Link to={query({ day: move(1) })}>Next {view === "calendar" ? "month" : view === "agenda" ? "week" : "day"}</Link></nav>}
+        {view !== "list" && count > limit && <Banner tone="warning">Showing {limit} of {count} bookings. Filter by Availability or Event/Service to see the rest.</Banner>}
+      </BlockStack></div>
     </BlockStack></Card>
-    {!bookings.length && <Card><Text as="p">No bookings match these filters.</Text></Card>}
+    {!bookings.length && <Card><EmptyState heading="No bookings here yet" image="https://cdn.shopify.com/s/files/1/0757/9955/files/empty-state.svg"
+      action={{ content: "Add a booking", url: "/app/bookings/new" }}>
+      <p>Bookings show here when customers book on your store, or when you add one yourself.</p>
+    </EmptyState></Card>}
     {view === "calendar" ? <div className="bn-calendar" aria-label="Monthly bookings">{calendarDays(day, timezone).map(cell => <section key={cell.date} className={"bn-calendar-day" + (cell.inMonth ? "" : " bn-calendar-padding")}>
       <h2>{cell.label}</h2>{cell.inMonth && (groups.get(cell.date) ?? []).map(booking => <Link className="bn-calendar-booking" key={booking.id} to={query({ view: "list", q: booking.id, tab: "all", page: "1" })}>
         <time>{local(booking.startAt).toFormat("h:mm a")}</time><strong>{booking.service.title}</strong>{columns.has("customer") && <span>{booking.customerName || booking.customerEmail}</span>}
