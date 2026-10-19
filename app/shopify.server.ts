@@ -15,6 +15,7 @@ const shopify = shopifyApp({
   distribution: AppDistribution.AppStore,
   sessionStorage: getSessionStorage(),
   hooks: { afterAuth: async ({ session, admin }) => { const identity = await syncShopIdentity(session); if (identity) await syncShopProfile(identity.id, admin); } },
+  future: { expiringOfflineAccessTokens: true },
 });
 
 export default shopify;
