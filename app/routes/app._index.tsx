@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { DateTime } from "luxon";
 import { z } from "zod";
-import { Form, Link, redirect, useActionData, useLoaderData, useSearchParams, useRevalidator } from "react-router";
+import { Form, Link, redirect, useActionData, useLoaderData, useNavigate, useSearchParams, useRevalidator } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { Page, Card, BlockStack, Text, Badge, Banner, TextField, Select, Button } from "@shopify/polaris";
+import { Page, Card, BlockStack, Text, Badge, Banner, TextField, Select, Button, Tabs } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
 import { cancelBooking } from "../lib/bookings/service.server";
 import { formError } from "../lib/admin/errors.server";
@@ -42,6 +42,7 @@ export default function Bookings() {
   const { bookings, count, insight, page, tab, q, timezone, setup, view, day, staff, service, hideChecked, staffOptions, serviceOptions, limit } = data;
   const result = useActionData<typeof action>();
   const [search] = useSearchParams();
+  const navigate = useNavigate();
   const refresh = useRevalidator();
   const [qValue, setQValue] = useState(q);
   const [timezoneValue, setTimezoneValue] = useState(timezone);
@@ -86,10 +87,13 @@ export default function Bookings() {
       {insight ? <><ul>{insight.highlights.map((line, i) => <li key={i}>{line}</li>)}</ul><p>{insight.nudge}</p></> : <p>Review booking trends, cancellations, and your most booked Events/Services.</p>}
     </BlockStack></Card>
     <Card><BlockStack gap="400">
-      <div className="bn-heading-row"><nav className="bn-heading-row" aria-label="Booking view">{bookingViews.map(value => <Link key={value} to={query({ view: value, page: "1" })} aria-current={view === value ? "page" : undefined}>{title(value)}</Link>)}</nav>
+      <div className="bn-heading-row">
+        <Tabs tabs={bookingViews.map(value => ({ id: value, content: title(value) }))} selected={bookingViews.indexOf(view)}
+          onSelect={index => navigate(query({ view: bookingViews[index]!, page: "1" }))} />
         <Button onClick={() => void refresh.revalidate()} disabled={refresh.state !== "idle"} loading={refresh.state !== "idle"}>{refresh.state === "idle" ? "Refresh" : "Refreshing…"}</Button>
       </div>
-      <nav className="bn-heading-row" aria-label="Booking status">{bookingTabs.map(value => <Link key={value} to={query({ tab: value, page: "1" })} aria-current={tab === value ? "page" : undefined}>{value === "recent" ? "Recently booked" : title(value)}</Link>)}</nav>
+      <Tabs tabs={bookingTabs.map(value => ({ id: value, content: value === "recent" ? "Recently booked" : title(value) }))} selected={bookingTabs.indexOf(tab)}
+        onSelect={index => navigate(query({ tab: bookingTabs[index]!, page: "1" }))} />
       <Form method="get" className="bn-form"><input type="hidden" name="tab" value={tab} /><input type="hidden" name="view" value={view} />
         <div className="bn-form-grid">
           <TextField label="Search" name="q" value={qValue} onChange={setQValue} placeholder="Name, email, booking or order ID" autoComplete="off" />
