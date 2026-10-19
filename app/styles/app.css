@@ -67,6 +67,17 @@
 @media (min-width: 480px) { .bn-calendar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 768px) { .bn-calendar { grid-template-columns: repeat(7, minmax(0, 1fr)); } .bn-calendar-padding { display: block; opacity: 0.5; } }
 
+.bn-choice-cards { display: grid; gap: var(--bn-space-3); }
+.bn-choice-card { display: flex; align-items: flex-start; gap: var(--bn-space-3); border: 1px solid var(--p-color-border, #d5d9dd);
+  border-radius: var(--bn-radius); padding: var(--bn-space-4); cursor: pointer; min-height: var(--bn-touch); background: white; }
+.bn-choice-card:hover { border-color: var(--p-color-border-emphasis, #8a9199); }
+.bn-choice-card[data-selected="true"] { border-color: #2150eb; border-width: 2px; background: #f4f6ff; }
+.bn-choice-card input[type="radio"] { margin-top: 4px; }
+.bn-choice-card strong { display: block; }
+@media (min-width: 480px) { .bn-choice-cards[data-columns="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.bn-pill-group { display: flex; flex-wrap: wrap; gap: var(--bn-space-2); }
+.bn-wizard-step { color: var(--p-color-text-subdued, #6d7175); font-weight: 500; margin-bottom: var(--bn-space-2); }
+
 .bn-team { max-width: 1024px; margin-inline: auto; padding: var(--bn-space-4); display: grid; gap: var(--bn-space-6); font-size: var(--bn-font-body); }
 .bn-team h1 { font-size: var(--bn-font-heading); line-height: 1.3; }
 .bn-team h2 { font-weight: 700; font-size: 20px; margin-bottom: var(--bn-space-4); }

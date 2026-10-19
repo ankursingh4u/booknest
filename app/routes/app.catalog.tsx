@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { z } from "zod";
 import { useAppBridge } from "@shopify/app-bridge-react";
-import { data, Form, Link, redirect, useActionData, useLoaderData, useLocation, useSearchParams } from "react-router";
+import { data, Form, Link, redirect, useActionData, useLoaderData, useLocation, useNavigate, useSearchParams } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { Page, Card, BlockStack, Text, Badge, Banner, RadioButton, TextField, Button, Tabs, EmptyState } from "@shopify/polaris";
+import { Page, Card, BlockStack, Text, Badge, Banner, RadioButton, TextField, Button, Tabs, EmptyState, Modal } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
 import { catalogData, catalogKind, mutateCatalog } from "../lib/admin/catalog.server";
 import { formError } from "../lib/admin/errors.server";
-import { AdminField as Field, AdminSelectField as SelectField, AdminMultiField as MultiField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction } from "../components/AdminFields";
+import { AdminField as Field, AdminSelectField as SelectField, AdminMultiField as MultiField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction, AdminChoiceCard } from "../components/AdminFields";
 import { verifyBookingVariant } from "../lib/shopify/variant.server";
 import { createBookingProduct } from "../lib/shopify/product-setup.server";
 const titles = { locations: "Locations", availabilities: "Availabilities", services: "Events/Services" };
@@ -45,8 +45,11 @@ export default function Catalog() {
   const { kind, title, rows, locations, staff, timezone, currency, creationKey } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>();
   const [search] = useSearchParams();
+  const navigate = useNavigate();
   const location = useLocation();
   const edit = rows.find(row => row.id === search.get("edit"));
+  const creatingService = kind === "services" && !edit && search.has("new");
+  const open = Boolean(edit) || (search.has("new") && !creatingService);
   const submitted = result?.submitted?.id === (edit?.id ?? "") ? result.submitted : null;
   const value = { ...edit?.values, ...submitted?.values };
   const field = (name: string, label: string, type = "text", fallback = "", required = false, help?: string) =>
@@ -56,10 +59,11 @@ export default function Catalog() {
   const [query, setQuery] = useState("");
   const visible = rows.filter(row => (tab === "active" ? row.active : !row.active)
     && (query === "" || row.title.toLowerCase().includes(query.toLowerCase()) || row.summary.toLowerCase().includes(query.toLowerCase())));
+  const close = () => navigate(location.pathname);
   return <Page title={title}><BlockStack gap="400">
     {search.has("saved") && !result && <Banner tone="success">Changes saved.</Banner>}
-    {result && <Banner tone="critical"><p>{result.error}</p>{Object.entries(result.fields).map(([name, errors]) => errors?.map(error => <p key={name + error}>{name}: {error}</p>))}</Banner>}
-    <div className="bn-editor-layout"><Card padding="0"><BlockStack gap="0">
+    {result && !creatingService && <Banner tone="critical"><p>{result.error}</p>{Object.entries(result.fields).map(([name, errors]) => errors?.map(error => <p key={name + error}>{name}: {error}</p>))}</Banner>}
+    <div className={open ? "bn-editor-layout" : undefined}><Card padding="0"><BlockStack gap="0">
       <div className="bn-heading-row" style={{ padding: "var(--bn-space-4)" }}><Text as="h2" variant="headingMd">{title}</Text><Button variant="primary" url="?new=1">+ Create</Button></div>
       <Tabs tabs={[{ id: "active", content: "Active" }, { id: "archived", content: "Archived" }]} selected={tab === "active" ? 0 : 1} onSelect={index => setTab(index === 0 ? "active" : "archived")} />
       <div style={{ padding: "var(--bn-space-4)" }}><TextField label="Search" labelHidden value={query} onChange={setQuery} placeholder={"Search by name or email"} autoComplete="off" /></div>
@@ -74,8 +78,8 @@ export default function Catalog() {
         {rows.length >= 500 && <Text as="p">Showing the first 500 records.</Text>}
       </BlockStack>}
     </BlockStack></Card>
-    <Card><Form method="post" className="bn-form" key={location.key}>
-      <Text as="h2" variant="headingMd">{edit ? "Edit " + edit.title : "Add " + (kind === "services" ? "Event/Service" : kind === "availabilities" ? "Availability" : "location")}</Text>
+    {open && <Card><Form method="post" className="bn-form" key={location.key}>
+      <Text as="h2" variant="headingMd">{edit ? "Edit " + edit.title : "Add " + (kind === "availabilities" ? "Availability" : "location")}</Text>
       <input type="hidden" name="intent" value="save" /><input type="hidden" name="id" value={edit?.id ?? ""} />
       {kind === "locations" && <>{field("name", "Location name", "text", "", true)}{field("address", "Address", "textarea")}{field("timezone", "Timezone", "text", timezone, true, "IANA name, for example Asia/Kolkata.")}</>}
       {kind === "availabilities" && <>
@@ -86,7 +90,7 @@ export default function Catalog() {
         <MultiField name="locationIds" label="Locations" selected={submitted?.locationIds ?? edit?.selected ?? []} options={locations} />
         <Link to="/app/schedules">Manage working hours and time off</Link>
       </>}
-      {kind === "services" && <>
+      {kind === "services" && edit && <>
         {field("title", "Event/Service name", "text", "", true)}{field("slug", "URL name", "text", "", true, "Lowercase words separated by hyphens.")}
         {field("description", "Description", "textarea")}
         <SelectField name="locationId" label="Location" value={value.locationId} options={locations} required />
@@ -102,8 +106,84 @@ export default function Catalog() {
         {field("customerRescheduleCutoffHours", "Customer reschedule cutoff (hours)", "number", "0", false, "Customers can reschedule until this many hours before the booking.")}</div>
       </>}
       <SaveButton>{edit ? "Save changes" : "Create"}</SaveButton>
-    </Form></Card></div>
+    </Form></Card>}</div>
+    {creatingService && <ServiceWizard locations={locations} staff={staff} currency={currency} creationKey={creationKey} result={result} onClose={close} />}
   </BlockStack></Page>;
+}
+
+const durationPresets = ["15", "30", "45", "60", "90"];
+function ServiceWizard({ locations, staff, currency, creationKey, result, onClose }: {
+  locations: { value: string; label: string }[]; staff: { value: string; label: string }[]; currency: string; creationKey: string;
+  result: ReturnType<typeof useActionData<typeof action>>; onClose: () => void;
+}) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [step, setStep] = useState(1);
+  const totalSteps = 5;
+  const [offeringKind, setOfferingKind] = useState<"paid" | "free" | null>(null);
+  const [capacityChoice, setCapacityChoice] = useState<"one" | "group">("one");
+  const [durationChoice, setDurationChoice] = useState("30");
+  const [customDuration, setCustomDuration] = useState("30");
+  const duration = durationChoice === "custom" ? customDuration : durationChoice;
+  const submitted = result?.submitted ?? null;
+  const errors = result?.fields;
+  const field = (name: string, label: string, type = "text", fallback = "", required = false, help?: string) =>
+    <Field name={name} label={label} type={type} value={submitted?.values[name] ?? fallback} required={required} help={help} errors={errors?.[name]} step={type === "number" ? "1" : undefined} />;
+  const stepTitles = ["What kind of Event/Service do you want to create?", "Basic details", "Set up your time slots", "Availabilities", "Pricing and policies"];
+  return <Modal open title={"Create an Event/Service"} onClose={onClose} size="large"
+    primaryAction={step === totalSteps
+      ? { content: "Create", onAction: () => formRef.current?.requestSubmit() }
+      : { content: "Continue", disabled: step === 1 && !offeringKind, onAction: () => setStep(step + 1) }}
+    secondaryActions={step > 1 ? [{ content: "Back", onAction: () => setStep(step - 1) }] : undefined}>
+    <Modal.Section>
+      <p className="bn-wizard-step">Step {step} of {totalSteps}</p>
+      <Text as="h2" variant="headingMd">{stepTitles[step - 1]}</Text>
+      <Form method="post" className="bn-form" ref={formRef}>
+        <input type="hidden" name="intent" value="save" /><input type="hidden" name="id" value="" />
+        <div style={{ display: step === 1 ? undefined : "none" }}><BlockStack gap="400">
+          <div className="bn-choice-cards" data-columns="2">
+            <AdminChoiceCard name="offeringKindChoice" value="paid" label="Paid service" description="Customers pay when they book, in full or as a deposit." checked={offeringKind === "paid"} onSelect={() => setOfferingKind("paid")} />
+            <AdminChoiceCard name="offeringKindChoice" value="free" label="Free booking" description="No charge at checkout. You can still collect payment another way." checked={offeringKind === "free"} onSelect={() => setOfferingKind("free")} />
+          </div>
+        </BlockStack></div>
+        <div style={{ display: step === 2 ? undefined : "none" }}><BlockStack gap="400">
+          {field("title", "Event/Service name", "text", "", true)}
+          {field("slug", "URL name", "text", "", true, "Lowercase words separated by hyphens.")}
+          {field("description", "Description", "textarea")}
+          <SelectField name="locationId" label="Location" options={locations} required />
+        </BlockStack></div>
+        <div style={{ display: step === 3 ? undefined : "none" }}><BlockStack gap="400">
+          <Text as="p" fontWeight="semibold">Appointment length</Text>
+          <div className="bn-pill-group">
+            {durationPresets.map(value => <Button key={value} pressed={durationChoice === value} onClick={() => setDurationChoice(value)}>{value} min</Button>)}
+            <Button pressed={durationChoice === "custom"} onClick={() => setDurationChoice("custom")}>Custom</Button>
+          </div>
+          {durationChoice === "custom" && <TextField label="Custom duration (minutes)" type="number" value={customDuration} onChange={setCustomDuration} autoComplete="off" />}
+          <input type="hidden" name="durationMin" value={duration} />
+          <Text as="p" fontWeight="semibold">How many people can book each slot?</Text>
+          <div className="bn-choice-cards" data-columns="2">
+            <AdminChoiceCard name="capacityChoice" value="one" label="One-on-one" description="One customer per slot." checked={capacityChoice === "one"} onSelect={() => setCapacityChoice("one")} />
+            <AdminChoiceCard name="capacityChoice" value="group" label="Group" description="Multiple customers per slot." checked={capacityChoice === "group"} onSelect={() => setCapacityChoice("group")} />
+          </div>
+          {capacityChoice === "group" ? field("capacity", "Seats per time", "number", "4", true) : <input type="hidden" name="capacity" value="1" />}
+          {field("slotIntervalMin", "Slot interval (minutes)", "number", "", false, "Leave blank to offer starts at the Event/Service duration.")}
+          <div className="bn-form-grid">{field("bufferBefore", "Buffer before (minutes)", "number", "0")}{field("bufferAfter", "Buffer after (minutes)", "number", "0")}</div>
+        </BlockStack></div>
+        <div style={{ display: step === 4 ? undefined : "none" }}>
+          <MultiField name="staffIds" label="Availabilities" selected={submitted?.staffIds ?? []} options={staff} />
+        </div>
+        <div style={{ display: step === 5 ? undefined : "none" }}><BlockStack gap="400">
+          {offeringKind === "paid" ? <ProductSetup initialVariant="" initialPrice="0.00" creationKey={submitted?.creationKey || creationKey} initialMode="existing" currency={currency} errors={errors} />
+            : <><input type="hidden" name="price" value="0.00" /><input type="hidden" name="productMode" value="existing" /><input type="hidden" name="variantId" value="" /><input type="hidden" name="creationKey" value={submitted?.creationKey || creationKey} /><p>This will be a free booking. No payment is collected at checkout.</p></>}
+          {offeringKind === "paid" && <><SelectField name="depositType" label="Payment" value="NONE" options={[{ value: "NONE", label: "Full payment at checkout" }, { value: "FULL", label: "Full payment" }, { value: "FIXED", label: "Fixed deposit" }, { value: "PERCENT", label: "Percentage deposit" }]} />
+            {field("depositValue", "Deposit amount or percentage", "text", "0")}</>}
+          <div className="bn-form-grid">{field("minNoticeHours", "Minimum notice (hours)", "number", "1")}{field("maxAdvanceDays", "Booking window (days)", "number", "60")}</div>
+          <div className="bn-form-grid">{field("customerCancelCutoffHours", "Customer cancellation cutoff (hours)", "number", "0", false, "Customers can cancel until this many hours before the booking.")}
+          {field("customerRescheduleCutoffHours", "Customer reschedule cutoff (hours)", "number", "0", false, "Customers can reschedule until this many hours before the booking.")}</div>
+        </BlockStack></div>
+        {result && <Banner tone="critical"><p>{result.error}</p>{Object.entries(result.fields).map(([name, fieldErrors]) => fieldErrors?.map(error => <p key={name + error}>{name}: {error}</p>))}</Banner>}
+      </Form>
+    </Modal.Section>
+  </Modal>;
 }
 
 function ProductSetup({ initialVariant, initialPrice, creationKey, initialMode, currency, errors }: {

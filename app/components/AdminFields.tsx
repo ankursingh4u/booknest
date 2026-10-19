@@ -57,6 +57,15 @@ export function AdminSaveButton({ children = "Save" }: { children?: string }) {
   return <Button submit variant="primary" loading={busy}>{busy ? "Saving…" : children}</Button>;
 }
 
+export function AdminChoiceCard({ name, value, label, description, checked, onSelect }: {
+  name: string; value: string; label: string; description?: string; checked: boolean; onSelect: () => void;
+}) {
+  return <label className="bn-choice-card" data-selected={checked}>
+    <input type="radio" name={name} value={value} checked={checked} onChange={onSelect} />
+    <span><strong>{label}</strong>{description && <span>{description}</span>}</span>
+  </label>;
+}
+
 export function AdminRecordAction({ id, intent, children }: { id: string; intent: string; children: string }) {
   return <Form method="post">
     <input type="hidden" name="id" value={id} /><input type="hidden" name="intent" value={intent} />
