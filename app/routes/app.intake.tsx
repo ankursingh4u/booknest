@@ -4,7 +4,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Page, Card, BlockStack, Text, Banner } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
 import { formError } from "../lib/admin/errors.server";
-import { Field, SelectField, SaveButton, RecordAction } from "../components/Fields";
+import { AdminField as Field, AdminSelectField as SelectField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction, AdminCheckbox } from "../components/AdminFields";
 const questionSchema = z.object({
   serviceId: z.string().min(1).max(100), label: z.string().trim().min(1).max(500),
   type: z.enum(["TEXT", "TEXTAREA", "SELECT"]), required: z.boolean(),
@@ -55,7 +55,7 @@ export default function Intake() {
       <SelectField name="type" label="Answer format" value={edit?.type ?? "TEXT"} required options={[{ value: "TEXT", label: "Short text" }, { value: "TEXTAREA", label: "Long text" }, { value: "SELECT", label: "Choose an option" }]} />
       <Field name="options" label="Options, one per line" type="textarea" value={edit?.options.join("\n")} />
       <Field name="sortOrder" label="Display order" type="number" value={edit?.sortOrder ?? 0} />
-      <label><input type="checkbox" name="required" defaultChecked={edit?.required ?? false} /> Required answer</label><SaveButton>Save question</SaveButton>
+      <AdminCheckbox name="required" label="Required answer" defaultChecked={edit?.required ?? false} /><SaveButton>Save question</SaveButton>
     </Form></Card></div>
   </BlockStack></Page>;
 }

@@ -3,12 +3,13 @@ import { DateTime } from "luxon";
 import { z } from "zod";
 import { Form, Link, redirect, useActionData, useLoaderData } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { Page, Card, BlockStack, Text, Banner } from "@shopify/polaris";
+import { Page, Card, BlockStack, Text, Banner, RadioButton } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
 import { createBooking, listDaySlots, rescheduleBooking } from "../lib/bookings/service.server";
 import { BookingError } from "../lib/bookings/validation";
 import { formError } from "../lib/admin/errors.server";
-import { Field, SelectField, SaveButton } from "../components/Fields";
+import { AdminField as Field, AdminSelectField as SelectField, AdminSaveButton as SaveButton, AdminCheckbox } from "../components/AdminFields";
+import { useState } from "react";
 import { logAccess } from "../lib/audit/access-log.server";
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const { shop, db, session } = await requireShop(request);
@@ -45,6 +46,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 export default function BookingForm() {
   const { services, serviceId, date, quantity, availability, questions, booking, requestId } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>();
+  const [slot, setSlot] = useState("");
   return <Page title={booking ? "Reschedule booking" : "Add a booking"} backAction={{ content: "Bookings", url: "/app" }}><BlockStack gap="400">
     {result && <Banner tone="critical">{result.error}{Object.values(result.fields).flat().map((error, index) => <p key={index}>{error}</p>)}</Banner>}
     {booking && <Banner>{booking.customerName} · {booking.customerEmail}</Banner>}
@@ -56,14 +58,16 @@ export default function BookingForm() {
     {availability && <Card><Form method="post" className="bn-form" key={serviceId + date + quantity}>
       <Text as="h2" variant="headingMd">Choose a time · {availability.timezone}</Text>
       <input type="hidden" name="serviceId" value={serviceId} /><input type="hidden" name="quantity" value={quantity} /><input type="hidden" name="idempotencyKey" value={requestId} />
+      <input type="hidden" name="slot" value={slot} />
       <fieldset className="bn-options bn-slot-grid"><legend>Available times</legend>
-        {availability.slots.map(slot => <label key={slot.startAt + slot.staffId}><input type="radio" name="slot" required value={JSON.stringify({ startAt: slot.startAt, staffId: slot.staffId })} />
-          {slot.label} · {slot.staffName} · {slot.remaining} left</label>)}
+        {availability.slots.map(option => { const json = JSON.stringify({ startAt: option.startAt, staffId: option.staffId });
+          return <RadioButton key={option.startAt + option.staffId} name="slot-choice" checked={slot === json} onChange={() => setSlot(json)}
+            label={option.label + " · " + option.staffName + " · " + option.remaining + " left"} />; })}
         {!availability.slots.length && <p>No times available. Choose another date or check <Link to="/app/schedules">working hours</Link>.</p>}
       </fieldset>
       {booking?.status === "NEEDS_REVIEW" && <><Banner tone="warning">Review the Shopify order, payment, product, and guest count before confirming this appointment. This action keeps the recorded payment and order reference.</Banner>
         <Field name="reviewName" label="Customer name" value={booking.customerName ?? ""} required /><Field name="reviewEmail" label="Customer email" type="email" value={booking.customerEmail} required />
-        <label><input type="checkbox" name="reviewed" value="yes" required /> I reviewed the order and agree to confirm this booking at the selected time.</label>
+        <AdminCheckbox name="reviewed" value="yes" label="I reviewed the order and agree to confirm this booking at the selected time." />
       </>}
       {!booking && <><div className="bn-form-grid"><Field name="name" label="Customer name" required /><Field name="email" label="Customer email" type="email" required /></div>
         <Field name="phone" label="Phone" type="tel" /><Field name="notes" label="Notes" type="textarea" />

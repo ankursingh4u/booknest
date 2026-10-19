@@ -8,7 +8,7 @@ import { withShopTransaction } from "../db.server";
 import { catalogData, CatalogError } from "../lib/admin/catalog.server";
 import { ruleSchema, blackoutSchema, additionalHoursSchema, formValues } from "../lib/admin/schemas";
 import { formError } from "../lib/admin/errors.server";
-import { Field, SelectField, SaveButton, RecordAction } from "../components/Fields";
+import { AdminField as Field, AdminSelectField as SelectField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction } from "../components/AdminFields";
 import { decideTimeOff, revokeTimeOff } from "../lib/team/time-off.server";
 const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 export async function loader({ request }: LoaderFunctionArgs) {

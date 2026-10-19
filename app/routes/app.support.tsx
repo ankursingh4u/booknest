@@ -4,7 +4,7 @@ import { redirect, useLoaderData } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Page, Card, BlockStack, Text } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
-import { RecordAction } from "../components/Fields";
+import { AdminRecordAction as RecordAction } from "../components/AdminFields";
 export async function loader({ request }: LoaderFunctionArgs) {
   const { db } = await requireShop(request);
   const [webhooks, notifications, seatUsage] = await Promise.all([

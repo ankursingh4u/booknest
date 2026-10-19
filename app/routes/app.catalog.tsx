@@ -3,11 +3,11 @@ import { z } from "zod";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { data, Form, Link, redirect, useActionData, useLoaderData, useLocation, useSearchParams } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { Page, Card, BlockStack, Text, Badge, Banner } from "@shopify/polaris";
+import { Page, Card, BlockStack, Text, Badge, Banner, RadioButton, TextField, Button } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
 import { catalogData, catalogKind, mutateCatalog } from "../lib/admin/catalog.server";
 import { formError } from "../lib/admin/errors.server";
-import { Field, SelectField, MultiField, SaveButton, RecordAction } from "../components/Fields";
+import { AdminField as Field, AdminSelectField as SelectField, AdminMultiField as MultiField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction } from "../components/AdminFields";
 import { verifyBookingVariant } from "../lib/shopify/variant.server";
 import { createBookingProduct } from "../lib/shopify/product-setup.server";
 const titles = { locations: "Locations", availabilities: "Availabilities", services: "Events/Services" };
@@ -124,21 +124,21 @@ function ProductSetup({ initialVariant, initialPrice, creationKey, initialMode, 
   }
   return <>
     <input type="hidden" name="creationKey" value={key} />
-    <Field name="price" label={"Price (" + currency + ")"} errors={errors?.price}>
-      <input id="price" name="price" inputMode="decimal" value={price} onChange={event => setPrice(event.target.value)} required aria-invalid={Boolean(errors?.price?.length)} />
-    </Field>
+    <TextField label={"Price (" + currency + ")"} id="price" name="price" inputMode="decimal" value={price} onChange={setPrice}
+      requiredIndicator error={errors?.price?.[0]} autoComplete="off" />
     <fieldset className="bn-options"><legend>Shopify product for paid bookings</legend>
-      <label><input type="radio" name="productMode" value="existing" checked={mode === "existing"} onChange={() => setMode("existing")} /> Choose an existing product</label>
-      <label><input type="radio" name="productMode" value="new" checked={mode === "new"} onChange={() => setMode("new")} /> Create a new booking product</label>
+      <RadioButton name="productMode" value="existing" label="Choose an existing product" checked={mode === "existing"} onChange={() => setMode("existing")} />
+      <RadioButton name="productMode" value="new" label="Create a new booking product" checked={mode === "new"} onChange={() => setMode("new")} />
     </fieldset>
     {mode === "existing" ? <div className="bn-field">
       <input type="hidden" name="variantId" value={variantId} />
       <p>{label || (variantId ? "A Shopify product variant is linked." : "Choose the product variant customers will purchase.")}</p>
-      <button type="button" onClick={chooseVariant} disabled={choosing}>{choosing ? "Opening Shopify…" : variantId ? "Change Shopify product" : "Choose Shopify product"}</button>
+      <Button onClick={chooseVariant} loading={choosing} disabled={choosing}>{choosing ? "Opening Shopify…" : variantId ? "Change Shopify product" : "Choose Shopify product"}</Button>
       {pickerError && <p className="bn-error" role="alert">{pickerError}</p>}
       <small>The picker fills the product price. BookNest verifies the active variant and price when you save. Free bookings do not require a product.</small>
-      <details><summary>Enter a variant ID manually</summary><label htmlFor="manualVariantId">Shopify product variant ID</label>
-        <input id="manualVariantId" value={variantId} onChange={event => { setVariantId(event.target.value); setLabel(""); }} aria-invalid={Boolean(errors?.variantId?.length)} placeholder="Numeric ID or Shopify GID" />
+      <details><summary>Enter a variant ID manually</summary>
+        <TextField label="Shopify product variant ID" id="manualVariantId" value={variantId}
+          onChange={value => { setVariantId(value); setLabel(""); }} error={Boolean(errors?.variantId?.length)} placeholder="Numeric ID or Shopify GID" autoComplete="off" />
       </details>
     </div> : <p>Saving a paid Event/Service creates one Shopify product at this price and publishes it to your Online Store. The booking product does not require shipping. Retrying this form reuses the same product.</p>}
   </>;

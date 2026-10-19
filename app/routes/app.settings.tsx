@@ -6,7 +6,7 @@ import { requireShop } from "../lib/auth/admin.server";
 import { timezoneSchema } from "../lib/admin/schemas";
 import { formError } from "../lib/admin/errors.server";
 import { syncShopProfile } from "../lib/shopify/profile.server";
-import { Field, SaveButton } from "../components/Fields";
+import { AdminField as Field, AdminSaveButton as SaveButton } from "../components/AdminFields";
 export async function loader({ request }: LoaderFunctionArgs) {
   const { db, shop } = await requireShop(request);
   return { settings: await db.shop.findUniqueOrThrow({ where: { id: shop.id }, select: { domain: true, timezone: true, email: true, currency: true, plan: true } }),

@@ -1,0 +1,65 @@
+import { useState, type ReactNode } from "react";
+import { Form, useNavigation } from "react-router";
+import { TextField, Select, ChoiceList, Checkbox, Button, Labelled } from "@shopify/polaris";
+
+type TextFieldType = "text" | "email" | "number" | "password" | "search" | "tel" | "url" | "date" | "datetime-local" | "month" | "time" | "week";
+
+export function AdminField({ name, label, type = "text", value = "", required = false, help, errors, children, step }: {
+  name: string; label: string; type?: string; value?: string | number; required?: boolean;
+  help?: string; errors?: string[]; children?: ReactNode; step?: string | number;
+}) {
+  const [current, setCurrent] = useState(value === undefined || value === null ? "" : String(value));
+  if (children) {
+    return <Labelled id={name} label={label} helpText={help} error={errors?.[0]} requiredIndicator={required}>{children}</Labelled>;
+  }
+  if (type === "textarea") {
+    return <TextField label={label} name={name} id={name} value={current} onChange={setCurrent} multiline={3}
+      autoComplete="off" requiredIndicator={required} helpText={help} error={errors?.[0]} />;
+  }
+  return <TextField label={label} name={name} id={name} type={type as TextFieldType} value={current} onChange={setCurrent}
+    autoComplete="off" requiredIndicator={required} helpText={help} error={errors?.[0]} step={step === undefined ? undefined : Number(step)} />;
+}
+
+export function AdminSelectField({ name, label, value = "", options, required = false }: {
+  name: string; label: string; value?: string; options: { value: string; label: string }[]; required?: boolean;
+}) {
+  const [current, setCurrent] = useState(value);
+  return <Select label={label} name={name} id={name} value={current} onChange={setCurrent} requiredIndicator={required}
+    options={[{ value: "", label: "Choose…" }, ...options]} />;
+}
+
+export function AdminMultiField({ name, label, selected, options }: {
+  name: string; label: string; selected: string[]; options: { value: string; label: string }[];
+}) {
+  const [current, setCurrent] = useState(selected);
+  if (!options.length) return <Labelled id={name} label={label}><p>Add a record first.</p></Labelled>;
+  return <ChoiceList title={label} name={name} allowMultiple selected={current} onChange={setCurrent}
+    choices={options.map(option => ({ value: option.value, label: option.label }))} />;
+}
+
+export function AdminCheckbox({ name, label, value, defaultChecked = false, onToggle }: {
+  name: string; label: ReactNode; value?: string; defaultChecked?: boolean; onToggle?: (checked: boolean) => void;
+}) {
+  const [checked, setChecked] = useState(defaultChecked);
+  return <Checkbox label={label} name={name} value={value} checked={checked}
+    onChange={next => { setChecked(next); onToggle?.(next); }} />;
+}
+
+export function AdminButton({ children, onClick, disabled = false, loading = false, variant, type = "button" }: {
+  children: string; onClick?: () => void; disabled?: boolean; loading?: boolean; variant?: "primary" | "secondary" | "tertiary" | "plain"; type?: "button" | "submit";
+}) {
+  return <Button onClick={onClick} disabled={disabled} loading={loading} variant={variant} submit={type === "submit"}>{children}</Button>;
+}
+
+export function AdminSaveButton({ children = "Save" }: { children?: string }) {
+  const navigation = useNavigation();
+  const busy = navigation.state !== "idle";
+  return <Button submit variant="primary" loading={busy}>{busy ? "Saving…" : children}</Button>;
+}
+
+export function AdminRecordAction({ id, intent, children }: { id: string; intent: string; children: string }) {
+  return <Form method="post">
+    <input type="hidden" name="id" value={id} /><input type="hidden" name="intent" value={intent} />
+    <AdminSaveButton>{children}</AdminSaveButton>
+  </Form>;
+}

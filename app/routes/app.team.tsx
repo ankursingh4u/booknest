@@ -3,10 +3,10 @@ import { DateTime } from "luxon";
 import { z } from "zod";
 import { Form, useActionData, useLoaderData } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { Page, Card, BlockStack, Banner } from "@shopify/polaris";
+import { Page, Card, BlockStack, Banner, TextField } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
 import { formError } from "../lib/admin/errors.server";
-import { Field, SelectField, SaveButton, RecordAction } from "../components/Fields";
+import { AdminField as Field, AdminSelectField as SelectField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction, AdminCheckbox } from "../components/AdminFields";
 import { CatalogError } from "../lib/admin/catalog.server";
 import { withShopTransaction } from "../db.server";
 import { syncBilling } from "../lib/billing/service.server";
@@ -53,12 +53,13 @@ export default function Team() {
   const result = useActionData<typeof action>();
   return <Page title="Team Portal"><BlockStack gap="400">
     {result?.error && <Banner tone="critical">{result.error}</Banner>}
-    {result && "invitation" in result && result.invitation && <Banner tone="success"><p>Share this private invitation with the team member. It expires in 24 hours and works once.</p><label className="bn-field">Invitation link<input readOnly value={result.invitation} onFocus={event => event.target.select()} /></label></Banner>}
+    {result && "invitation" in result && result.invitation && <Banner tone="success"><p>Share this private invitation with the team member. It expires in 24 hours and works once.</p>
+      <TextField label="Invitation link" value={result.invitation} readOnly onChange={() => {}} selectTextOnFocus autoComplete="off" /></Banner>}
     {result && "revoked" in result && result.revoked && <Banner tone="success">Access revoked. Existing sessions no longer work.</Banner>}
     <Card><Form method="post" className="bn-form"><h2>Invite a team member</h2><p>Team members see bookings for their assigned Availability and can check customers in or request time off.</p>
       <input type="hidden" name="intent" value="invite" /><Field name="email" label="Team member email" type="email" required />
       <SelectField name="staffId" label="Assigned Availability" required options={staff.map(s => ({ value: s.id, label: s.firstName + " " + s.lastName }))} />
-      {billed ? <label><input name="billingConsent" type="checkbox" value="yes" required /> I agree to $8 USD per active seat per billing cycle. Removing access stops future-cycle charges; the current cycle is not prorated.</label> : <p>Team Portal is in testing. No seat charges are submitted.</p>}
+      {billed ? <AdminCheckbox name="billingConsent" value="yes" label="I agree to $8 USD per active seat per billing cycle. Removing access stops future-cycle charges; the current cycle is not prorated." /> : <p>Team Portal is in testing. No seat charges are submitted.</p>}
       <p>Creating another invitation for the same email signs out its existing sessions.</p><SaveButton>Create invitation</SaveButton>
     </Form></Card>
     <Card><BlockStack gap="400"><h2>Team access</h2>{!seats.length && <p>No team members yet.</p>}{seats.map(seat => <article key={seat.id} className="bn-record"><div><strong>{seat.email}</strong><p>{staff.find(s => s.id === seat.staffId)?.firstName ?? "Archived Availability"} · {seat.active ? "Active" : "Revoked"}</p></div>{seat.active && <RecordAction id={seat.id} intent="revoke">Revoke access</RecordAction>}</article>)}</BlockStack></Card>

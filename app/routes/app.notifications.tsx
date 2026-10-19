@@ -4,7 +4,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Page, Card, BlockStack, Text, Banner } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
 import { formError } from "../lib/admin/errors.server";
-import { Field, SaveButton } from "../components/Fields";
+import { AdminField as Field, AdminSaveButton as SaveButton, AdminCheckbox } from "../components/AdminFields";
 const kinds = ["CONFIRMATION", "RESCHEDULED", "CANCELLED", "REMINDER_24H", "REMINDER_1H"] as const;
 export async function loader({ request }: LoaderFunctionArgs) {
   const { db } = await requireShop(request);
@@ -28,7 +28,7 @@ export default function Notifications() {
       return <Card key={kind}><Form method="post" className="bn-form"><Text as="h2" variant="headingMd">{kind.replaceAll("_", " ")}</Text>
         <input type="hidden" name="type" value={kind} /><Field name="subject" label="Subject" value={template?.subject ?? kind.replaceAll("_", " ") + " · {{service_name}}"} required />
         <Field name="body" label="Message" type="textarea" value={template?.body ?? "Hi {{customer_name}},\n\n{{service_name}}\n{{start_time}}\n{{location}}\n\nManage your booking: {{manage_url}}\n{{contact_link}}"} required />
-        <label><input type="checkbox" name="enabled" defaultChecked={template?.enabled ?? true} /> Send this email</label><SaveButton>Save message</SaveButton>
+        <AdminCheckbox name="enabled" label="Send this email" defaultChecked={template?.enabled ?? true} /><SaveButton>Save message</SaveButton>
       </Form></Card>;
     })}
   </BlockStack></Page>;

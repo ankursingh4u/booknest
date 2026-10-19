@@ -1,12 +1,13 @@
+import { useState } from "react";
 import { DateTime } from "luxon";
 import { z } from "zod";
 import { Form, Link, redirect, useActionData, useLoaderData, useSearchParams, useRevalidator } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { Page, Card, BlockStack, Text, Badge, Banner } from "@shopify/polaris";
+import { Page, Card, BlockStack, Text, Badge, Banner, TextField, Select, Button } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
 import { cancelBooking } from "../lib/bookings/service.server";
 import { formError } from "../lib/admin/errors.server";
-import { RecordAction } from "../components/Fields";
+import { AdminRecordAction, AdminCheckbox } from "../components/AdminFields";
 import { bookingFilters, bookingSelect, bookingTabs, bookingViews, calendarDays } from "../lib/bookings/views";
 import { logAccess } from "../lib/audit/access-log.server";
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -42,6 +43,11 @@ export default function Bookings() {
   const result = useActionData<typeof action>();
   const [search] = useSearchParams();
   const refresh = useRevalidator();
+  const [qValue, setQValue] = useState(q);
+  const [timezoneValue, setTimezoneValue] = useState(timezone);
+  const [staffValue, setStaffValue] = useState(staff);
+  const [serviceValue, setServiceValue] = useState(service);
+  const [dayValue, setDayValue] = useState(day);
   const columnOptions = ["customer", "availability", "location", "order"];
   const columns = new Set(search.has("columnsConfigured") ? search.getAll("columns") : columnOptions);
   const query = (changes: Record<string, string>) => { const params = new URLSearchParams(search); params.delete("saved"); for (const [key, value] of Object.entries(changes)) params.set(key, value); return "?" + params; };
@@ -60,11 +66,11 @@ export default function Bookings() {
     {booking.status === "NEEDS_REVIEW" && <Banner tone="warning">This paid booking needs review. Check the order and arrange another time or a refund with the customer.</Banner>}
     {booking.status === "NEEDS_REVIEW" && <Link to={"/app/bookings/" + booking.id + "/reschedule"}>Review and confirm a new time</Link>}
     {booking.status === "CONFIRMED" && <div className="bn-heading-row">
-      <RecordAction id={booking.id} intent={booking.checkedInAt ? "undo-checkin" : "checkin"}>{booking.checkedInAt ? "Undo check-in" : "Check in"}</RecordAction>
+      <AdminRecordAction id={booking.id} intent={booking.checkedInAt ? "undo-checkin" : "checkin"}>{booking.checkedInAt ? "Undo check-in" : "Check in"}</AdminRecordAction>
       <Link to={"/app/bookings/" + booking.id + "/reschedule"}>Reschedule</Link>
-      <RecordAction id={booking.id} intent="complete">Complete</RecordAction><RecordAction id={booking.id} intent="no-show">No-show</RecordAction>
+      <AdminRecordAction id={booking.id} intent="complete">Complete</AdminRecordAction><AdminRecordAction id={booking.id} intent="no-show">No-show</AdminRecordAction>
     </div>}
-    {["CONFIRMED", "PENDING", "NEEDS_REVIEW"].includes(booking.status) && <details><summary>Cancel booking</summary><p>Cancellation does not refund a Shopify order. Handle refunds in Shopify.</p><RecordAction id={booking.id} intent="cancel">Confirm cancellation</RecordAction></details>}
+    {["CONFIRMED", "PENDING", "NEEDS_REVIEW"].includes(booking.status) && <details><summary>Cancel booking</summary><p>Cancellation does not refund a Shopify order. Handle refunds in Shopify.</p><AdminRecordAction id={booking.id} intent="cancel">Confirm cancellation</AdminRecordAction></details>}
   </BlockStack></Card>;
   const anchor = DateTime.fromISO(day, { zone: timezone });
   const move = (direction: number) => anchor.plus(view === "calendar" ? { months: direction } : { days: direction * (view === "agenda" ? 7 : 1) }).toISODate()!;
@@ -81,20 +87,22 @@ export default function Bookings() {
     </BlockStack></Card>
     <Card><BlockStack gap="400">
       <div className="bn-heading-row"><nav className="bn-heading-row" aria-label="Booking view">{bookingViews.map(value => <Link key={value} to={query({ view: value, page: "1" })} aria-current={view === value ? "page" : undefined}>{title(value)}</Link>)}</nav>
-        <button onClick={() => void refresh.revalidate()} disabled={refresh.state !== "idle"}>{refresh.state === "idle" ? "Refresh" : "Refreshing…"}</button>
+        <Button onClick={() => void refresh.revalidate()} disabled={refresh.state !== "idle"} loading={refresh.state !== "idle"}>{refresh.state === "idle" ? "Refresh" : "Refreshing…"}</Button>
       </div>
       <nav className="bn-heading-row" aria-label="Booking status">{bookingTabs.map(value => <Link key={value} to={query({ tab: value, page: "1" })} aria-current={tab === value ? "page" : undefined}>{value === "recent" ? "Recently booked" : title(value)}</Link>)}</nav>
       <Form method="get" className="bn-form"><input type="hidden" name="tab" value={tab} /><input type="hidden" name="view" value={view} />
         <div className="bn-form-grid">
-          <label className="bn-field">Search<input name="q" defaultValue={q} placeholder="Name, email, booking or order ID" /></label>
-          <label className="bn-field">Timezone<input name="timezone" defaultValue={timezone} /></label>
-          <label className="bn-field">Availability<select name="staff" defaultValue={staff}><option value="">All Availabilities</option>{staffOptions.map(s => <option value={s.id} key={s.id}>{s.firstName} {s.lastName}</option>)}</select></label>
-          <label className="bn-field">Event/Service<select name="service" defaultValue={service}><option value="">All Events/Services</option>{serviceOptions.map(s => <option value={s.id} key={s.id}>{s.title}</option>)}</select></label>
-          {view !== "list" && <label className="bn-field">Date<input type="date" name="day" defaultValue={day} required /></label>}
+          <TextField label="Search" name="q" value={qValue} onChange={setQValue} placeholder="Name, email, booking or order ID" autoComplete="off" />
+          <TextField label="Timezone" name="timezone" value={timezoneValue} onChange={setTimezoneValue} autoComplete="off" />
+          <Select label="Availability" name="staff" value={staffValue} onChange={setStaffValue}
+            options={[{ value: "", label: "All Availabilities" }, ...staffOptions.map(s => ({ value: s.id, label: s.firstName + " " + s.lastName }))]} />
+          <Select label="Event/Service" name="service" value={serviceValue} onChange={setServiceValue}
+            options={[{ value: "", label: "All Events/Services" }, ...serviceOptions.map(s => ({ value: s.id, label: s.title }))]} />
+          {view !== "list" && <TextField label="Date" type="date" name="day" value={dayValue} onChange={setDayValue} autoComplete="off" requiredIndicator />}
         </div>
-        <details><summary>Visible details</summary><input type="hidden" name="columnsConfigured" value="1" /><fieldset className="bn-options"><legend>Show in booking cards</legend>{columnOptions.map(column => <label key={column}><input type="checkbox" name="columns" value={column} defaultChecked={columns.has(column)} />{title(column)}</label>)}</fieldset><p>CSV exports include all details.</p></details>
-        <label><input name="hideChecked" type="checkbox" value="1" defaultChecked={hideChecked} /> Hide checked-in</label>
-        <button className="bn-primary-link" type="submit">Apply filters</button>
+        <details><summary>Visible details</summary><input type="hidden" name="columnsConfigured" value="1" /><fieldset className="bn-options"><legend>Show in booking cards</legend>{columnOptions.map(column => <AdminCheckbox key={column} name="columns" value={column} label={title(column)} defaultChecked={columns.has(column)} />)}</fieldset><p>CSV exports include all details.</p></details>
+        <AdminCheckbox name="hideChecked" value="1" label="Hide checked-in" defaultChecked={hideChecked} />
+        <Button submit variant="primary">Apply filters</Button>
       </Form>
       <div className="bn-heading-row"><p>{count} booking(s) · times in {timezone}</p><a href={"/app/bookings.csv" + query({})} download>Export matching bookings</a></div>
       {view !== "list" && <nav className="bn-heading-row" aria-label="Date range"><Link to={query({ day: move(-1) })}>Previous {view === "calendar" ? "month" : view === "agenda" ? "week" : "day"}</Link><strong>{anchor.toFormat(view === "calendar" ? "LLLL yyyy" : "dd LLL yyyy")}</strong><Link to={query({ day: move(1) })}>Next {view === "calendar" ? "month" : view === "agenda" ? "week" : "day"}</Link></nav>}

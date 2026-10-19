@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Form, redirect, useLoaderData } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { Page, Card, BlockStack, Text, Banner, Badge } from "@shopify/polaris";
+import { Page, Card, BlockStack, Text, Banner, Badge, Button } from "@shopify/polaris";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { z } from "zod";
 import { requireShop } from "../lib/auth/admin.server";
-import { SaveButton } from "../components/Fields";
+import { AdminSaveButton as SaveButton } from "../components/AdminFields";
 import { withShopTransaction } from "../db.server";
 export async function loader({ request }: LoaderFunctionArgs) {
   const { shop, db } = await requireShop(request);
@@ -36,7 +36,7 @@ export default function Calendar() {
     {staff.map(person => <Card key={person.id}><BlockStack gap="400"><Text as="h2" variant="headingMd">{person.firstName} {person.lastName}</Text>
       <Badge tone={person.googleCalendarId ? "success" : undefined}>{person.googleCalendarId ? "Connected" : "Not connected"}</Badge>
       {person.googleSyncError && <Banner tone="warning">{person.googleSyncError}</Banner>}
-      <button className="bn-primary-link" type="button" disabled={!configured || busy} onClick={() => void connect(person.id)}>{person.googleCalendarId ? "Reconnect calendar" : "Connect calendar"}</button>
+      <Button variant="primary" disabled={!configured || busy} loading={busy} onClick={() => void connect(person.id)}>{person.googleCalendarId ? "Reconnect calendar" : "Connect calendar"}</Button>
       {person.googleCalendarId && <details><summary>Disconnect</summary><p>Sync will stop. Existing BookNest events will remain in Google Calendar until you remove them there.</p>
         <Form method="post"><input type="hidden" name="staffId" value={person.id} /><SaveButton>Disconnect calendar</SaveButton></Form></details>}
     </BlockStack></Card>)}
