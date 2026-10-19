@@ -1,6 +1,6 @@
-import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
+import { Form, Link, useActionData, useLoaderData, useNavigation } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { Page, Card, BlockStack, Banner, Button } from "@shopify/polaris";
+import { Page, Card, BlockStack, Banner, Button, EmptyState, Text } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
 import { insightData, generateInsight } from "../lib/insights/service.server";
 export async function loader({ request }: LoaderFunctionArgs) { const { shop } = await requireShop(request); return insightData(shop.id); }
@@ -9,6 +9,17 @@ export default function Insights() {
   const { current, previous, start, end, timezone, top, insight, aiAvailable } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>(), navigation = useNavigation();
   const money = (value: number, currency: string) => new Intl.NumberFormat(undefined, { style: "currency", currency }).format(value / 100);
+  if (current.bookings === 0 && previous.bookings === 0 && !top.length) {
+    return <Page title="Booking insights"><Card><EmptyState heading="Your first booking starts your reports"
+      image="https://cdn.shopify.com/s/files/1/0757/9955/files/empty-state.svg" action={{ content: "Create a bookable service", url: "/app/manage/services" }}>
+      <BlockStack gap="200">
+        <Text as="p">You are a few steps away from your first report.</Text>
+        <p>1. <Link to="/app/manage/services">Create a bookable service</Link></p>
+        <p>2. <Link to="/app/settings">Show the booking button on your store</Link></p>
+        <p>3. Make a test booking, or share your product page</p>
+      </BlockStack>
+    </EmptyState></Card></Page>;
+  }
   return <Page title="Booking insights"><BlockStack gap="400">
     <p>{start} to {end} · {timezone} · compared with the preceding 30 days</p>
     {result && !result.generated && <Banner tone="info">AI summary is unavailable. The summary below uses your booking metrics.</Banner>}
