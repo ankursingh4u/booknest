@@ -3,7 +3,7 @@ import { DateTime } from "luxon";
 import { z } from "zod";
 import { Link, redirect, useActionData, useLoaderData, useNavigate, useSearchParams, useRevalidator } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { Page, Card, BlockStack, Text, Badge, Banner, TextField, Select, Button, IndexFilters, IndexFiltersMode, useSetIndexFiltersMode, EmptyState } from "@shopify/polaris";
+import { Page, Card, BlockStack, Text, Badge, Banner, TextField, Select, Button, Tabs, IndexFilters, IndexFiltersMode, useSetIndexFiltersMode, EmptyState } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
 import { cancelBooking } from "../lib/bookings/service.server";
 import { formError } from "../lib/admin/errors.server";
@@ -86,8 +86,9 @@ export default function Bookings() {
     </Banner>
     <Card padding="0"><BlockStack gap="0">
       <div className="bn-heading-row" style={{ padding: "var(--bn-space-4)" }}>
-        <div style={{ minWidth: 160 }}><Select labelHidden label="View" value={view}
-          onChange={value => navigate(query({ view: value, page: "1" }))} options={bookingViews.map(value => ({ value, label: title(value) }))} /></div>
+        <Tabs tabs={bookingViews.map(value => ({ id: value, content: title(value) }))}
+          selected={bookingViews.indexOf(view)}
+          onSelect={index => navigate(query({ view: bookingViews[index]!, page: "1" }))} />
         <Button onClick={() => void refresh.revalidate()} disabled={refresh.state !== "idle"} loading={refresh.state !== "idle"}>{refresh.state === "idle" ? "Refresh" : "Refreshing…"}</Button>
       </div>
       <IndexFilters
