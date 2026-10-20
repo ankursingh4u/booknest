@@ -28,6 +28,16 @@ export function AdminSelectField({ name, label, value = "", options, required = 
     options={[{ value: "", label: "Choose…" }, ...options]} />;
 }
 
+const timezoneOptions = (typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [])
+  .map(zone => ({ value: zone, label: zone.replaceAll("_", " ") }));
+export function AdminTimezoneField({ name, label, value = "", required = false, help }: {
+  name: string; label: string; value?: string; required?: boolean; help?: string;
+}) {
+  const [current, setCurrent] = useState(value);
+  return <Select label={label} name={name} id={name} value={current} onChange={setCurrent} requiredIndicator={required} helpText={help}
+    options={[{ value: "", label: "Choose…" }, ...timezoneOptions]} />;
+}
+
 export function AdminMultiField({ name, label, selected, options }: {
   name: string; label: string; selected: string[]; options: { value: string; label: string }[];
 }) {

@@ -6,7 +6,7 @@ import { requireShop } from "../lib/auth/admin.server";
 import { timezoneSchema } from "../lib/admin/schemas";
 import { formError } from "../lib/admin/errors.server";
 import { syncShopProfile } from "../lib/shopify/profile.server";
-import { AdminField as Field, AdminSaveButton as SaveButton } from "../components/AdminFields";
+import { AdminField as Field, AdminSaveButton as SaveButton, AdminTimezoneField } from "../components/AdminFields";
 export async function loader({ request }: LoaderFunctionArgs) {
   const { db, shop } = await requireShop(request);
   return { settings: await db.shop.findUniqueOrThrow({ where: { id: shop.id }, select: { domain: true, timezone: true, email: true, currency: true, plan: true } }),
@@ -31,7 +31,7 @@ export default function Settings() {
     {result && <Banner tone="critical">{result.error}{Object.values(result.fields).flat().map((error, i) => <p key={i}>{error}</p>)}</Banner>}
     {search.has("saved") && <Banner tone="success">Store settings saved.</Banner>}
     <Card><Form method="post" className="bn-form"><Text as="h2" variant="headingMd">Store preferences</Text>
-      <p>{settings.domain} · {settings.currency}</p><Field name="timezone" label="Default timezone" value={settings.timezone} required />
+      <p>{settings.domain} · {settings.currency}</p><AdminTimezoneField name="timezone" label="Default timezone" value={settings.timezone} required />
       <Field name="email" label="Store contact email" type="email" value={settings.email ?? ""} required help="Used for replies and customer data requests." />
       <SaveButton>Save preferences</SaveButton>
     </Form><Form method="post"><input type="hidden" name="intent" value="sync" /><SaveButton>Refresh store details from Shopify</SaveButton></Form></Card>

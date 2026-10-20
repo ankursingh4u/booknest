@@ -7,7 +7,7 @@ import { Page, Card, BlockStack, Text, Badge, Banner, RadioButton, TextField, Bu
 import { requireShop } from "../lib/auth/admin.server";
 import { catalogData, catalogKind, mutateCatalog } from "../lib/admin/catalog.server";
 import { formError } from "../lib/admin/errors.server";
-import { AdminField as Field, AdminSelectField as SelectField, AdminMultiField as MultiField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction, AdminChoiceCard } from "../components/AdminFields";
+import { AdminField as Field, AdminSelectField as SelectField, AdminMultiField as MultiField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction, AdminChoiceCard, AdminTimezoneField } from "../components/AdminFields";
 import { verifyBookingVariant } from "../lib/shopify/variant.server";
 import { createBookingProduct } from "../lib/shopify/product-setup.server";
 const titles = { locations: "Locations", availabilities: "Availabilities", services: "Events/Services" };
@@ -89,11 +89,13 @@ export default function Catalog() {
     {open && <Card><Form method="post" className="bn-form" key={location.key}>
       <Text as="h2" variant="headingMd">{edit ? "Edit " + edit.title : "Add " + (kind === "availabilities" ? "Availability" : "location")}</Text>
       <input type="hidden" name="intent" value="save" /><input type="hidden" name="id" value={edit?.id ?? ""} />
-      {kind === "locations" && <>{field("name", "Location name", "text", "", true)}{field("address", "Address", "textarea")}{field("timezone", "Timezone", "text", timezone, true, "IANA name, for example Asia/Kolkata.")}</>}
+      {kind === "locations" && <>{field("name", "Location name", "text", "", true)}{field("address", "Address", "textarea")}
+        <AdminTimezoneField name="timezone" label="Timezone" value={value.timezone ?? timezone} required /></>}
       {kind === "availabilities" && <>
         {field("firstName", "First name", "text", "", true)}{field("lastName", "Last name", "text", "", true)}
         {field("email", "Email", "email", "", true)}{field("phone", "Phone", "tel")}
-        {field("timezone", "Timezone", "text", timezone, true)}{field("contactLink", "Contact Link", "url", "", false, "Your meeting or video call link.")}
+        <AdminTimezoneField name="timezone" label="Timezone" value={value.timezone ?? timezone} required />
+        {field("contactLink", "Contact Link", "url", "", false, "Your meeting or video call link.")}
         {field("imageUrl", "Profile image URL", "url")}{field("bio", "Description", "textarea")}
         <MultiField name="locationIds" label="Locations" selected={submitted?.locationIds ?? edit?.selected ?? []} options={locations} />
         <Link to="/app/schedules">Manage working hours and time off</Link>

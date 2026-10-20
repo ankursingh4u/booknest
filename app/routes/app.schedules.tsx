@@ -8,7 +8,7 @@ import { withShopTransaction } from "../db.server";
 import { catalogData, CatalogError } from "../lib/admin/catalog.server";
 import { ruleSchema, blackoutSchema, additionalHoursSchema, formValues } from "../lib/admin/schemas";
 import { formError } from "../lib/admin/errors.server";
-import { AdminField as Field, AdminSelectField as SelectField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction } from "../components/AdminFields";
+import { AdminField as Field, AdminSelectField as SelectField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction, AdminTimezoneField } from "../components/AdminFields";
 import { decideTimeOff, revokeTimeOff } from "../lib/team/time-off.server";
 const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -91,7 +91,7 @@ export default function Schedules() {
         <SelectField name="locationId" label="Location" options={locations} required />
         <SelectField name="staffId" label="Availability (blank for everyone at this location)" options={staff} />
         <Field name="date" label="Date" type="date" required />
-        <Field name="timezone" label="Timezone" value={timezone} required />
+        <AdminTimezoneField name="timezone" label="Timezone" value={timezone} required />
         <Field name="startTime" label="Opens" type="time" value="09:00" required />
         <Field name="endTime" label="Closes" type="time" value="17:00" required />
       </div>
@@ -114,7 +114,7 @@ export default function Schedules() {
       <SelectField name="serviceId" label="Event/Service" options={services} />
       <SelectField name="weekday" label="Day" value="1" required options={weekdays.map((label, value) => ({ label, value: String(value) }))} />
       <Field name="startTime" label="Start time" type="time" value="09:00" required /><Field name="endTime" label="End time" type="time" value="17:00" required />
-      <Field name="timezone" label="Timezone" value={timezone} required />
+      <AdminTimezoneField name="timezone" label="Timezone" value={timezone} required />
       <SaveButton>Add hours</SaveButton>
     </Form></Card>
     <Card><Form method="post" className="bn-form" key={"blackout-" + location.key}>
@@ -122,7 +122,7 @@ export default function Schedules() {
       <SelectField name="staffId" label="Availability (blank for everyone)" options={staff} />
       <SelectField name="locationId" label="Location (blank for all locations)" options={locations} />
       <Field name="startLocal" label="Starts" type="datetime-local" required /><Field name="endLocal" label="Ends" type="datetime-local" required />
-      <Field name="timezone" label="Timezone" value={timezone} required /><Field name="reason" label="Reason" />
+      <AdminTimezoneField name="timezone" label="Timezone" value={timezone} required /><Field name="reason" label="Reason" />
       <SaveButton>Add time off</SaveButton>
     </Form></Card></div>
     <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Weekly hours</Text>
