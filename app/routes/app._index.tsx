@@ -3,7 +3,7 @@ import { DateTime } from "luxon";
 import { z } from "zod";
 import { Link, redirect, useActionData, useLoaderData, useNavigate, useSearchParams, useRevalidator } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { Page, Card, BlockStack, Text, Badge, Banner, TextField, Select, Button, ButtonGroup, IndexFilters, IndexFiltersMode, useSetIndexFiltersMode, EmptyState } from "@shopify/polaris";
+import { Page, Card, BlockStack, Text, Badge, Banner, TextField, Select, Button, IndexFilters, IndexFiltersMode, useSetIndexFiltersMode, EmptyState } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
 import { cancelBooking } from "../lib/bookings/service.server";
 import { formError } from "../lib/admin/errors.server";
@@ -87,18 +87,20 @@ export default function Bookings() {
     </Banner>
     <Card padding="0"><BlockStack gap="0">
       <div className="bn-heading-row" style={{ padding: "var(--bn-space-4)" }}>
-        <ButtonGroup variant="segmented">{bookingViews.map(value => <Button key={value} pressed={view === value} onClick={() => navigate(query({ view: value, page: "1" }))}>{title(value)}</Button>)}</ButtonGroup>
+        <div style={{ minWidth: 160 }}><Select labelHidden label="View" value={view}
+          onChange={value => navigate(query({ view: value, page: "1" }))} options={bookingViews.map(value => ({ value, label: title(value) }))} /></div>
         <Button onClick={() => void refresh.revalidate()} disabled={refresh.state !== "idle"} loading={refresh.state !== "idle"}>{refresh.state === "idle" ? "Refresh" : "Refreshing…"}</Button>
       </div>
       <IndexFilters
         mode={mode} setMode={setMode}
-        tabs={bookingTabs.map(value => ({ id: value, content: (value === "recent" ? "Recently booked" : title(value)) }))}
-        selected={bookingTabs.indexOf(tab)} onSelect={index => navigate(query({ tab: bookingTabs[index]!, page: "1" }))}
+        tabs={[]} selected={0} onSelect={() => {}}
         queryValue={qValue} queryPlaceholder="Name, email, booking or order ID"
         onQueryChange={setQValue} onQueryClear={() => { setQValue(""); navigate(query({ q: "", page: "1" })); }}
         onQueryBlur={() => navigate(query({ q: qValue, page: "1" }))}
-        onClearAll={() => navigate(query({ q: "", staff: "", service: "", hideChecked: "", page: "1" }))}
+        onClearAll={() => navigate(query({ q: "", staff: "", service: "", hideChecked: "", tab: "upcoming", page: "1" }))}
         filters={[
+          { key: "status", label: "Status", pinned: true, filter: <Select labelHidden label="Status" value={tab}
+            onChange={value => navigate(query({ tab: value, page: "1" }))} options={bookingTabs.map(value => ({ value, label: value === "recent" ? "Recently booked" : title(value) }))} /> },
           { key: "staff", label: "Availability", pinned: true, filter: <Select labelHidden label="Availability" value={staff}
             onChange={value => navigate(query({ staff: value, page: "1" }))} options={[{ value: "", label: "All Availabilities" }, ...staffOptions.map(s => ({ value: s.id, label: s.firstName + " " + s.lastName }))]} /> },
           { key: "service", label: "Event/Service", pinned: true, filter: <Select labelHidden label="Event/Service" value={service}
@@ -107,10 +109,12 @@ export default function Bookings() {
             defaultChecked={hideChecked} onToggle={checked => navigate(query({ hideChecked: checked ? "1" : "", page: "1" }))} /> },
         ]}
         appliedFilters={[
+          ...(tab !== "upcoming" ? [{ key: "status", label: "Status: " + (tab === "recent" ? "Recently booked" : title(tab)), onRemove: () => navigate(query({ tab: "upcoming", page: "1" })) }] : []),
           ...(staff ? [{ key: "staff", label: "Availability: " + (() => { const match = staffOptions.find(s => s.id === staff); return match ? match.firstName + " " + match.lastName : ""; })(), onRemove: () => navigate(query({ staff: "", page: "1" })) }] : []),
           ...(service ? [{ key: "service", label: "Event/Service: " + (serviceOptions.find(s => s.id === service)?.title ?? ""), onRemove: () => navigate(query({ service: "", page: "1" })) }] : []),
           ...(hideChecked ? [{ key: "hideChecked", label: "Hiding checked-in", onRemove: () => navigate(query({ hideChecked: "", page: "1" })) }] : []),
         ]}
+        hideQueryField={false}
         canCreateNewView={false}
       />
       <div style={{ padding: "var(--bn-space-4)" }}><BlockStack gap="400">
