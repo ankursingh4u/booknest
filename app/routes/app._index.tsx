@@ -76,11 +76,10 @@ export default function Bookings() {
   return <Page title="Bookings" subtitle="View, filter, and manage customer bookings" primaryAction={{ content: "Add a booking", url: "/app/bookings/new" }}><BlockStack gap="400">
     {result && <Banner tone="critical">{result.error}</Banner>}
     {search.has("saved") && <Banner tone="success">Booking updated.</Banner>}
-    {(!setup.locations || !setup.staff || !setup.services) && <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Set up your booking calendar</Text>
-      <Link to="/app/manage/locations">{setup.locations ? "✓" : "1."} Add a location and timezone</Link>
-      <Link to="/app/manage/availabilities">{setup.staff ? "✓" : "2."} Add Availabilities</Link>
-      <Link to="/app/schedules">3. Set working hours</Link><Link to="/app/manage/services">{setup.services ? "✓" : "4."} Create Events/Services</Link>
-    </BlockStack></Card>}
+    {(!setup.locations || !setup.staff || !setup.services) && <Banner tone="warning" title="Finish setting up your booking calendar"
+      action={{ content: "Continue setup", url: "/app/setup" }}>
+      <p>{[setup.locations, setup.staff, setup.services].filter(Boolean).length} of 3 setup steps complete.</p>
+    </Banner>}
     <Banner tone="info" title={insight && insight.model !== "rules-v1" ? "AI insights" : "Booking insights"}>
       {insight ? <BlockStack gap="200"><ul>{insight.highlights.map((line, i) => <li key={i}>{line}</li>)}</ul><p>{insight.nudge}</p><Link to="/app/insights">View insights</Link></BlockStack>
         : <BlockStack gap="200"><p>Review booking trends, cancellations, and your most booked Events/Services.</p><Link to="/app/insights">View insights</Link></BlockStack>}
