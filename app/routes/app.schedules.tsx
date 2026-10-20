@@ -8,7 +8,7 @@ import { withShopTransaction } from "../db.server";
 import { catalogData, CatalogError } from "../lib/admin/catalog.server";
 import { ruleSchema, blackoutSchema, additionalHoursSchema, formValues } from "../lib/admin/schemas";
 import { formError } from "../lib/admin/errors.server";
-import { AdminField as Field, AdminSelectField as SelectField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction, AdminTimezoneField } from "../components/AdminFields";
+import { AdminField as Field, AdminSelectField as SelectField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction, AdminTimezoneField, AdminMultiField as MultiField } from "../components/AdminFields";
 import { decideTimeOff, revokeTimeOff } from "../lib/team/time-off.server";
 const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -64,7 +64,10 @@ export async function action({ request }: ActionFunctionArgs) {
       const id = z.string().min(1).max(100).parse(form.get("id"));
       if (intent === "rule.delete") await db.availabilityRule.delete({ where: { id } });
       else await db.blackout.delete({ where: { id } });
-    } else if (intent === "rule.save") await db.availabilityRule.create({ data: { ...ruleSchema.parse(formValues(form)), shopId: shop.id } });
+    } else if (intent === "rule.save") {
+      const { weekdays, ...rule } = ruleSchema.parse(formValues(form));
+      await db.availabilityRule.createMany({ data: weekdays.map(weekday => ({ ...rule, weekday, shopId: shop.id })) });
+    }
     else await db.blackout.create({ data: { ...blackoutSchema.parse(formValues(form)), shopId: shop.id } });
     return redirect("/app/schedules");
   } catch (error) { return formError(error); }
@@ -79,10 +82,11 @@ export default function Schedules() {
     {result && <Banner tone="critical"><p>{result.error}</p>{Object.entries(result.fields).map(([key, errors]) => errors?.map(error => <p key={key + error}>{error}</p>))}</Banner>}
     <div className="bn-form-grid"><Card><Form method="post" className="bn-form" key={"rule-" + location.key}>
       <Text as="h2" variant="headingMd">Add weekly hours</Text><input type="hidden" name="intent" value="rule.save" />
-      <p>Recurring hours that repeat every week. Use this for an Availability who works the same hours every week, indefinitely.{!rules.length && " Add working hours before accepting bookings."}</p>
+      <p>Recurring hours that repeat every week. Use this for an Availability who works the same hours every week, indefinitely. Choose an Availability <strong>or</strong> an Event/Service (not both).{!rules.length && " Add working hours before accepting bookings."}</p>
       <SelectField name="staffId" label="Availability" options={staff} />
       <SelectField name="serviceId" label="Event/Service" options={services} />
-      <SelectField name="weekday" label="Day" value="1" required options={weekdays.map((label, value) => ({ label, value: String(value) }))} />
+      <MultiField name="weekdays" label="Days" required selected={["1"]} options={weekdays.map((label, value) => ({ label, value: String(value) }))} />
+      <p className="bn-muted">Open every day? Check all 7 - one submission adds all of them.</p>
       <Field name="startTime" label="Start time" type="time" value="09:00" required /><Field name="endTime" label="End time" type="time" value="17:00" required />
       <AdminTimezoneField name="timezone" label="Timezone" value={timezone} required />
       <SaveButton>Add hours</SaveButton>

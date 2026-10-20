@@ -24,11 +24,16 @@ describe("merchant input validation", () => {
     expect(staffSchema.safeParse({ firstName: "A", lastName: "B", email: "a@example.com", timezone: "UTC", contactLink: "javascript:alert(1)", locationIds: ["loc"] }).success).toBe(false);
   });
   it("accepts an overnight rule but rejects equal endpoints", () => {
-    expect(ruleSchema.safeParse({ staffId: "a", weekday: "1", startTime: "23:00", endTime: "02:00", timezone: "UTC" }).success).toBe(true);
-    expect(ruleSchema.safeParse({ staffId: "a", weekday: "1", startTime: "09:00", endTime: "09:00", timezone: "UTC" }).success).toBe(false);
+    expect(ruleSchema.safeParse({ staffId: "a", weekdays: ["1"], startTime: "23:00", endTime: "02:00", timezone: "UTC" }).success).toBe(true);
+    expect(ruleSchema.safeParse({ staffId: "a", weekdays: ["1"], startTime: "09:00", endTime: "09:00", timezone: "UTC" }).success).toBe(false);
   });
   it("requires exactly one schedule owner", () => {
-    expect(ruleSchema.safeParse({ staffId: "a", serviceId: "b", weekday: "1", startTime: "09:00", endTime: "17:00", timezone: "UTC" }).success).toBe(false);
+    expect(ruleSchema.safeParse({ staffId: "a", serviceId: "b", weekdays: ["1"], startTime: "09:00", endTime: "17:00", timezone: "UTC" }).success).toBe(false);
+  });
+  it("accepts multiple weekdays and dedupes them", () => {
+    const result = ruleSchema.safeParse({ staffId: "a", weekdays: ["1", "2", "1"], startTime: "09:00", endTime: "17:00", timezone: "UTC" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.weekdays).toEqual([1, 2]);
   });
   it("rejects a nonexistent blackout time during a spring transition", () => {
     expect(blackoutSchema.safeParse({ startLocal: "2026-03-08T02:30", endLocal: "2026-03-08T04:00", timezone: "America/New_York" }).success).toBe(false);
