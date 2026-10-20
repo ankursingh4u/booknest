@@ -86,7 +86,7 @@ export default function Catalog() {
         {rows.length >= 500 && <Text as="p">Showing the first 500 records.</Text>}
       </BlockStack>}
     </BlockStack></Card>
-    {open && <Card><Form method="post" className="bn-form" key={location.key}>
+    {open && <Card><Form method="post" className="bn-form" key={edit?.id ?? "new"}>
       <Text as="h2" variant="headingMd">{edit ? "Edit " + edit.title : "Add " + (kind === "availabilities" ? "Availability" : "location")}</Text>
       <input type="hidden" name="intent" value="save" /><input type="hidden" name="id" value={edit?.id ?? ""} />
       {kind === "locations" && <>{field("name", "Location name", "text", "", true)}{field("address", "Address", "textarea")}

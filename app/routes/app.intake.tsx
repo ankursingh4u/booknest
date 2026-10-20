@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Form, Link, redirect, useActionData, useLoaderData, useLocation, useSearchParams } from "react-router";
+import { Form, Link, redirect, useActionData, useLoaderData, useSearchParams } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Page, Card, BlockStack, Text, Banner } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
@@ -38,7 +38,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 export default function Intake() {
   const { questions, services } = useLoaderData<typeof loader>();
-  const result = useActionData<typeof action>(); const [search] = useSearchParams(); const location = useLocation();
+  const result = useActionData<typeof action>(); const [search] = useSearchParams();
   const edit = questions.find(question => question.id === search.get("edit"));
   return <Page title="Intake Questions" subtitle="Extra details you ask customers for when they book an Event/Service"><BlockStack gap="400">
     {result && <Banner tone="critical">{result.error}{Object.values(result.fields).flat().map((error, i) => <p key={i}>{error}</p>)}</Banner>}
@@ -48,7 +48,7 @@ export default function Intake() {
         <p>{services.find(service => service.id === question.serviceId)?.title} · {question.required ? "Required" : "Optional"}</p></div>
         <RecordAction id={question.id} intent="archive">Archive</RecordAction></article>)}
     </BlockStack></Card>
-    <Card><Form method="post" className="bn-form" key={location.key}><Text as="h2" variant="headingMd">{edit ? "Edit question" : "Add question"}</Text>
+    <Card><Form method="post" className="bn-form" key={edit?.id ?? "new"}><Text as="h2" variant="headingMd">{edit ? "Edit question" : "Add question"}</Text>
       <input type="hidden" name="id" value={edit?.id ?? ""} /><input type="hidden" name="intent" value="save" />
       <SelectField name="serviceId" label="Event/Service" value={edit?.serviceId} required options={services.map(service => ({ value: service.id, label: service.title }))} />
       <Field name="label" label="Question" value={edit?.label} required />

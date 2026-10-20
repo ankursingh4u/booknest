@@ -1,4 +1,4 @@
-import { Form, redirect, useActionData, useLoaderData, useLocation } from "react-router";
+import { Form, redirect, useActionData, useLoaderData } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Page, Card, BlockStack, Text, Banner } from "@shopify/polaris";
 import { z } from "zod";
@@ -75,12 +75,11 @@ export async function action({ request }: ActionFunctionArgs) {
 export default function Schedules() {
   const { additionalHours, timeOff, timezone, rules, blackouts, staff, services, locations } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>();
-  const location = useLocation();
   const format = (value: Date | string, zone: string) => (typeof value === "string" ? DateTime.fromISO(value) : DateTime.fromJSDate(value)).setZone(zone).toFormat("dd LLL yyyy, HH:mm");
   const name = (id: string | null, options: { value: string; label: string }[]) => options.find(o => o.value === id)?.label ?? "All";
   return <Page title="Schedules" subtitle="Weekly hours, one-off extra openings, and time off for your Availabilities"><BlockStack gap="400">
     {result && <Banner tone="critical"><p>{result.error}</p>{Object.entries(result.fields).map(([key, errors]) => errors?.map(error => <p key={key + error}>{error}</p>))}</Banner>}
-    <div className="bn-form-grid"><Card><Form method="post" className="bn-form" key={"rule-" + location.key}>
+    <div className="bn-form-grid"><Card><Form method="post" className="bn-form">
       <Text as="h2" variant="headingMd">Add weekly hours</Text><input type="hidden" name="intent" value="rule.save" />
       <p>Recurring hours that repeat every week. Use this for an Availability who works the same hours every week, indefinitely. Choose an Availability <strong>or</strong> an Event/Service (not both).{!rules.length && " Add working hours before accepting bookings."}</p>
       <SelectField name="staffId" label="Availability" options={staff} />
@@ -91,7 +90,7 @@ export default function Schedules() {
       <AdminTimezoneField name="timezone" label="Timezone" value={timezone} required />
       <SaveButton>Add hours</SaveButton>
     </Form></Card>
-    <Card><Form method="post" className="bn-form" key={"blackout-" + location.key}>
+    <Card><Form method="post" className="bn-form">
       <Text as="h2" variant="headingMd">Add time off or closure</Text><input type="hidden" name="intent" value="blackout.save" />
       <SelectField name="staffId" label="Availability (blank for everyone)" options={staff} />
       <SelectField name="locationId" label="Location (blank for all locations)" options={locations} />
@@ -116,7 +115,7 @@ export default function Schedules() {
       </article>)}
     </BlockStack></Card>}
     <Card><details><summary><Text as="span" variant="headingMd" fontWeight="semibold">Add opening hours for one date (optional)</Text></summary>
-      <Form method="post" className="bn-form" key={"additional-" + location.key}>
+      <Form method="post" className="bn-form">
         <input type="hidden" name="intent" value="additional.save" />
         <p>For a single extra date only - not for regular availability. Weekly hours still apply on top of this. Closures, time off, calendar conflicts, and Event/Service booking hours still limit available times.</p>
         <div className="bn-form-grid">
