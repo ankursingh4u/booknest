@@ -8,7 +8,7 @@ import { withShopTransaction } from "../db.server";
 import { catalogData, CatalogError } from "../lib/admin/catalog.server";
 import { ruleSchema, blackoutSchema, additionalHoursSchema, formValues } from "../lib/admin/schemas";
 import { formError } from "../lib/admin/errors.server";
-import { AdminField as Field, AdminSelectField as SelectField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction, AdminTimezoneField, AdminMultiField as MultiField } from "../components/AdminFields";
+import { AdminField as Field, AdminSelectField as SelectField, AdminEitherSelectField as EitherSelectField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction, AdminTimezoneField, AdminMultiField as MultiField } from "../components/AdminFields";
 import { decideTimeOff, revokeTimeOff } from "../lib/team/time-off.server";
 const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -81,9 +81,8 @@ export default function Schedules() {
     {result && <Banner tone="critical"><p>{result.error}</p>{Object.entries(result.fields).map(([key, errors]) => errors?.map(error => <p key={key + error}>{error}</p>))}</Banner>}
     <div className="bn-form-grid"><Card><Form method="post" className="bn-form">
       <Text as="h2" variant="headingMd">Add weekly hours</Text><input type="hidden" name="intent" value="rule.save" />
-      <p>Recurring hours that repeat every week. Use this for an Availability who works the same hours every week, indefinitely. Choose an Availability <strong>or</strong> an Event/Service (not both).{!rules.length && " Add working hours before accepting bookings."}</p>
-      <SelectField name="staffId" label="Availability" options={staff} />
-      <SelectField name="serviceId" label="Event/Service" options={services} />
+      <p>Recurring hours that repeat every week. Use this for an Availability who works the same hours every week, indefinitely. Choose an Availability <strong>or</strong> an Event/Service — picking one clears the other.{!rules.length && " Add working hours before accepting bookings."}</p>
+      <EitherSelectField firstName="staffId" firstLabel="Availability" firstOptions={staff} secondName="serviceId" secondLabel="Event/Service" secondOptions={services} />
       <MultiField name="weekdays" label="Days" required selected={["1"]} options={weekdays.map((label, value) => ({ label, value: String(value) }))} />
       <p className="bn-muted">Open every day? Check all 7 - one submission adds all of them.</p>
       <Field name="startTime" label="Start time" type="time" value="09:00" required /><Field name="endTime" label="End time" type="time" value="17:00" required />

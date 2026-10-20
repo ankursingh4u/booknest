@@ -28,6 +28,23 @@ export function AdminSelectField({ name, label, value = "", options, required = 
     options={[{ value: "", label: "Choose…" }, ...options]} />;
 }
 
+// Picking one of these two selects clears the other, since the server only accepts exactly one.
+export function AdminEitherSelectField({ firstName, firstLabel, firstValue = "", firstOptions, secondName, secondLabel, secondValue = "", secondOptions }: {
+  firstName: string; firstLabel: string; firstValue?: string; firstOptions: { value: string; label: string }[];
+  secondName: string; secondLabel: string; secondValue?: string; secondOptions: { value: string; label: string }[];
+}) {
+  const [first, setFirst] = useState(firstValue);
+  const [second, setSecond] = useState(secondValue);
+  return <>
+    <Select label={firstLabel} name={firstName} id={firstName} value={first}
+      onChange={value => { setFirst(value); if (value) setSecond(""); }}
+      options={[{ value: "", label: "Choose…" }, ...firstOptions]} />
+    <Select label={secondLabel} name={secondName} id={secondName} value={second}
+      onChange={value => { setSecond(value); if (value) setFirst(""); }}
+      options={[{ value: "", label: "Choose…" }, ...secondOptions]} />
+  </>;
+}
+
 // One representative IANA zone per distinct UTC offset currently in use worldwide (~38),
 // instead of every city Intl.supportedValuesOf("timeZone") returns (~400, mostly duplicates
 // of the same offset/DST rules). The IANA name is still what's stored, so DST stays correct.
