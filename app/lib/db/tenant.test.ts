@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scopeTenantQuery } from "./tenant.server";
+import { scopeTenantQuery, validateTenantReferences } from "./tenant.server";
 
 const shopId = "shop-a";
 
@@ -75,6 +75,26 @@ describe("scopeTenantQuery", () => {
     expect(() => scopeTenantQuery("NewModel", "findMany", {}, shopId)).toThrow(/model/i);
     expect(() => scopeTenantQuery("Service", "unexpected", {}, shopId)).toThrow(/operation/i);
     expect(() => scopeTenantQuery("Service", "findMany", {}, " ")).toThrow(/shopId/i);
+  });
+});
+
+describe("validateTenantReferences", () => {
+  const ownedLookup = async () => true;
+
+  it("allows an explicitly undefined optional relation, matching an absent key", async () => {
+    await expect(validateTenantReferences("AvailabilityRule", { staffId: "staff-a", serviceId: undefined }, shopId, ownedLookup))
+      .resolves.toBeUndefined();
+  });
+
+  it("still validates a present optional relation against the current shop", async () => {
+    const lookup = async () => false;
+    await expect(validateTenantReferences("AvailabilityRule", { staffId: "staff-b", serviceId: undefined }, shopId, lookup))
+      .rejects.toThrow(/does not belong to this shop/);
+  });
+
+  it("rejects every row in a createMany batch that carries an undefined optional relation", async () => {
+    const rows = [{ staffId: "staff-a", serviceId: undefined }, { staffId: "staff-a", serviceId: undefined }];
+    await expect(validateTenantReferences("AvailabilityRule", rows, shopId, ownedLookup)).resolves.toBeUndefined();
   });
 });
 

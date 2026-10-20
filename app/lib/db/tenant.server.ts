@@ -121,7 +121,7 @@ export async function validateTenantReferences(
         const target = to[index]!;
         const raw = data[key];
         const id = raw !== null && typeof raw === "object" ? asObject(raw).set : raw;
-        if (id === null) { isNull = true; break; }
+        if (id === null || id === undefined) { isNull = true; break; }
         if (typeof id !== "string" || !id) throw new Error("Invalid tenant reference: " + key);
         where[target] = id;
       }
