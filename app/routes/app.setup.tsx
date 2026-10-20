@@ -35,7 +35,7 @@ export default function Setup() {
     { title: "Set working hours", done: hours > 0, text: "Add weekly schedules and upcoming closures.", url: "/app/schedules" },
     { title: "Create Events/Services", done: services > 0, text: "Choose duration, capacity, price, and assigned Availabilities. Link paid bookings to an active Shopify product variant at the same price.", url: "/app/manage/services" },
   ];
-  return <Page title="Set up BookNest"><BlockStack gap="400">
+  return <Page title="Set up BookNest" subtitle="Complete these steps before taking your first booking"><BlockStack gap="400">
     {result && <Banner tone="critical">{result.error}</Banner>}{settings.onboardedAt && <Banner tone="success">Setup was marked complete. You can revisit these steps anytime.</Banner>}
     {steps.map((step, i) => <Card key={step.url}><BlockStack gap="400"><div className="bn-heading-row"><h2>{i + 1}. {step.title}</h2><Badge tone={step.done ? "success" : "attention"}>{step.done ? "Ready" : "To do"}</Badge></div><p>{step.text}</p><Link to={step.url}>Open step</Link></BlockStack></Card>)}
     <Card><BlockStack gap="400"><h2>6. Add the booking widget</h2><p>Open a product template in your theme editor. Add the BookNest booking app block, choose Inline or Popup and a theme, then save. For free bookings or a dedicated service page, enter the Event/Service ID in the block settings.</p>

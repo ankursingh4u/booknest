@@ -10,7 +10,7 @@ export default function Insights() {
   const result = useActionData<typeof action>(), navigation = useNavigation();
   const money = (value: number, currency: string) => new Intl.NumberFormat(undefined, { style: "currency", currency }).format(value / 100);
   if (current.bookings === 0 && previous.bookings === 0 && !top.length) {
-    return <Page title="Booking insights"><Card><EmptyState heading="Your first booking starts your reports"
+    return <Page title="Booking insights" subtitle="Trends, cancellations, and amounts for your bookings"><Card><EmptyState heading="Your first booking starts your reports"
       image="https://cdn.shopify.com/s/files/1/0757/9955/files/empty-state.svg" action={{ content: "Create a bookable service", url: "/app/manage/services" }}>
       <BlockStack gap="200">
         <Text as="p">You are a few steps away from your first report.</Text>
@@ -20,7 +20,7 @@ export default function Insights() {
       </BlockStack>
     </EmptyState></Card></Page>;
   }
-  return <Page title="Booking insights"><BlockStack gap="400">
+  return <Page title="Booking insights" subtitle="Trends, cancellations, and amounts for your bookings"><BlockStack gap="400">
     <p>{start} to {end} · {timezone} · compared with the preceding 30 days</p>
     {result && !result.generated && <Banner tone="info">AI summary is unavailable. The summary below uses your booking metrics.</Banner>}
     <Card><BlockStack gap="400"><h2>{insight.model === "rules-v1" ? "Booking summary" : "AI summary"}</h2><ul>{insight.highlights.map((line, i) => <li key={i}>{line}</li>)}</ul><p>{insight.nudge}</p>

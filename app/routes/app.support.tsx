@@ -25,7 +25,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 export default function Support() {
   const { webhooks, notifications, seatUsage } = useLoaderData<typeof loader>();
-  return <Page title="Support"><BlockStack gap="400">
+  return <Page title="Support" subtitle="Retry failed order updates, emails, and billing reports"><BlockStack gap="400">
     <Card><Text as="h2" variant="headingMd">Order updates requiring attention</Text>
       {!webhooks.length && <p>No failed order updates.</p>}
       {webhooks.map(item => <article className="bn-record" key={item.id}><div><strong>{item.topic.replaceAll("_", " ")}</strong><p>{item.lastError}</p><p>{item.attempts} attempts</p></div>

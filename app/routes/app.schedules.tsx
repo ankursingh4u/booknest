@@ -75,7 +75,7 @@ export default function Schedules() {
   const location = useLocation();
   const format = (value: Date | string, zone: string) => (typeof value === "string" ? DateTime.fromISO(value) : DateTime.fromJSDate(value)).setZone(zone).toFormat("dd LLL yyyy, HH:mm");
   const name = (id: string | null, options: { value: string; label: string }[]) => options.find(o => o.value === id)?.label ?? "All";
-  return <Page title="Schedules"><BlockStack gap="400">
+  return <Page title="Schedules" subtitle="Weekly hours, one-off extra openings, and time off for your Availabilities"><BlockStack gap="400">
     {result && <Banner tone="critical"><p>{result.error}</p>{Object.entries(result.fields).map(([key, errors]) => errors?.map(error => <p key={key + error}>{error}</p>))}</Banner>}
     <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Time-off requests</Text>
       {!timeOff.length && <p>No pending or approved time-off requests.</p>}

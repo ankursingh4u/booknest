@@ -47,7 +47,7 @@ export default function BookingForm() {
   const { services, serviceId, date, quantity, availability, questions, booking, requestId } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>();
   const [slot, setSlot] = useState("");
-  return <Page title={booking ? "Reschedule booking" : "Add a booking"} backAction={{ content: "Bookings", url: "/app" }}><BlockStack gap="400">
+  return <Page title={booking ? "Reschedule booking" : "Add a booking"} subtitle="Manually create or change a booking on a customer's behalf" backAction={{ content: "Bookings", url: "/app" }}><BlockStack gap="400">
     {result && <Banner tone="critical">{result.error}{Object.values(result.fields).flat().map((error, index) => <p key={index}>{error}</p>)}</Banner>}
     {booking && <Banner>{booking.customerName} · {booking.customerEmail}</Banner>}
     <Card><Form method="get" className="bn-form">

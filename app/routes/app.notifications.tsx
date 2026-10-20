@@ -21,7 +21,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 export default function Notifications() {
   const { templates } = useLoaderData<typeof loader>(); const result = useActionData<typeof action>();
-  return <Page title="Email notifications"><BlockStack gap="400">
+  return <Page title="Email notifications" subtitle="Customize the confirmation, reminder, and cancellation emails customers receive"><BlockStack gap="400">
     {result && <Banner tone="critical">{result.error}</Banner>}
     <Card><Text as="p">Use {"{{customer_name}}"}, {"{{service_name}}"}, {"{{start_time}}"}, {"{{location}}"}, {"{{staff_name}}"}, {"{{manage_url}}"}, and {"{{contact_link}}"} in your messages.</Text></Card>
     {kinds.map(kind => { const template = templates.find(item => item.type === kind);

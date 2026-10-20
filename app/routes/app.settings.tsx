@@ -27,7 +27,7 @@ export async function action({ request }: ActionFunctionArgs) {
 export default function Settings() {
   const { settings, emailConfigured } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>(); const [search] = useSearchParams();
-  return <Page title="Settings"><BlockStack gap="400">
+  return <Page title="Settings" subtitle="Store preferences, storefront widget, and email configuration"><BlockStack gap="400">
     {result && <Banner tone="critical">{result.error}{Object.values(result.fields).flat().map((error, i) => <p key={i}>{error}</p>)}</Banner>}
     {search.has("saved") && <Banner tone="success">Store settings saved.</Banner>}
     <Card><Form method="post" className="bn-form"><Text as="h2" variant="headingMd">Store preferences</Text>

@@ -13,7 +13,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 export default function Billing() {
   const data = useLoaderData<typeof loader>(), navigation = useNavigation();
-  return <Page title="Account and plan"><BlockStack gap="400">
+  return <Page title="Account and plan" subtitle="Your BookNest subscription and Team Portal seat billing"><BlockStack gap="400">
     {data.error && <Banner tone="warning">{data.error}</Banner>}
     {!data.configured && <Banner tone="info">Plan management is not available yet. Contact BookNest support to activate billing.</Banner>}
     <Card><BlockStack gap="400"><h2>Current plan</h2><p>{data.status === "ACTIVE" ? plans.find(p => p.id === data.plan)?.title ?? data.plan : data.status === "INACTIVE" ? "Choose a plan to get started" : data.status === "UNRECOGNIZED" ? "Your plan needs review. Contact BookNest support." : "Not verified"}</p>

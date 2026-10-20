@@ -30,7 +30,7 @@ export default function Calendar() {
       url.search = new URLSearchParams({ staffId, shop, id_token: token }).toString(); window.open(url.href, "_top");
     } catch { setError("Could not start the calendar connection. Reopen BookNest from Shopify and try again."); setBusy(false); }
   }
-  return <Page title="Google Calendar"><BlockStack gap="400">
+  return <Page title="Google Calendar" subtitle="Sync bookings to each Availability's personal Google Calendar"><BlockStack gap="400">
     {!configured && <Banner tone="warning">Google Calendar connection needs application configuration.</Banner>}
     {error && <Banner tone="critical">{error}</Banner>}
     {staff.map(person => <Card key={person.id}><BlockStack gap="400"><Text as="h2" variant="headingMd">{person.firstName} {person.lastName}</Text>

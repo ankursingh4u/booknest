@@ -73,7 +73,7 @@ export default function Bookings() {
   </BlockStack></Card>;
   const anchor = DateTime.fromISO(day, { zone: timezone });
   const move = (direction: number) => anchor.plus(view === "calendar" ? { months: direction } : { days: direction * (view === "agenda" ? 7 : 1) }).toISODate()!;
-  return <Page title="Bookings" primaryAction={{ content: "Add a booking", url: "/app/bookings/new" }}><BlockStack gap="400">
+  return <Page title="Bookings" subtitle="View, filter, and manage customer bookings" primaryAction={{ content: "Add a booking", url: "/app/bookings/new" }}><BlockStack gap="400">
     {result && <Banner tone="critical">{result.error}</Banner>}
     {search.has("saved") && <Banner tone="success">Booking updated.</Banner>}
     {(!setup.locations || !setup.staff || !setup.services) && <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Set up your booking calendar</Text>

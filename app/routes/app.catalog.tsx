@@ -11,6 +11,11 @@ import { AdminField as Field, AdminSelectField as SelectField, AdminMultiField a
 import { verifyBookingVariant } from "../lib/shopify/variant.server";
 import { createBookingProduct } from "../lib/shopify/product-setup.server";
 const titles = { locations: "Locations", availabilities: "Availabilities", services: "Events/Services" };
+const subtitles = {
+  locations: "Places where appointments happen, each with its own timezone.",
+  availabilities: "The staff or resources customers can book. Set their working hours in Schedules.",
+  services: "What customers book: duration, price, and which Availabilities can perform it.",
+};
 type Row = { id: string; title: string; summary: string; active: boolean; values: Record<string, string>; selected: string[] };
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const kind = catalogKind.parse(params.kind);
@@ -60,7 +65,7 @@ export default function Catalog() {
   const visible = rows.filter(row => (tab === "active" ? row.active : !row.active)
     && (query === "" || row.title.toLowerCase().includes(query.toLowerCase()) || row.summary.toLowerCase().includes(query.toLowerCase())));
   const close = () => navigate(location.pathname);
-  return <Page title={title}><BlockStack gap="400">
+  return <Page title={title} subtitle={subtitles[kind]}><BlockStack gap="400">
     {search.has("saved") && !result && <Banner tone="success">Changes saved.</Banner>}
     {result && !creatingService && <Banner tone="critical"><p>{result.error}</p>{Object.entries(result.fields).map(([name, errors]) => errors?.map(error => <p key={name + error}>{name}: {error}</p>))}</Banner>}
     <div className={open ? "bn-editor-layout" : undefined}><Card padding="0"><BlockStack gap="0">
@@ -73,7 +78,10 @@ export default function Catalog() {
       </EmptyState></div> : <BlockStack gap="0">
         {visible.map(row => <article className="bn-record" key={row.id} style={{ padding: "0 var(--bn-space-4)" }}>
           <div><Link to={"?edit=" + row.id}>{row.title}</Link><p>{row.summary}</p>{kind === "services" && <p>Event/Service ID: <code>{row.id}</code></p>}<Badge tone={row.active ? "success" : undefined}>{row.active ? "Active" : "Archived"}</Badge></div>
-          <RecordAction id={row.id} intent={row.active ? "archive" : "restore"}>{row.active ? "Archive" : "Restore"}</RecordAction>
+          <div className="bn-heading-row">
+            {kind === "availabilities" && row.active && <Button url="/app/schedules">Set working hours</Button>}
+            <RecordAction id={row.id} intent={row.active ? "archive" : "restore"}>{row.active ? "Archive" : "Restore"}</RecordAction>
+          </div>
         </article>)}
         {rows.length >= 500 && <Text as="p">Showing the first 500 records.</Text>}
       </BlockStack>}

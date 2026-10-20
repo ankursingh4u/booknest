@@ -40,7 +40,7 @@ export default function Intake() {
   const { questions, services } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>(); const [search] = useSearchParams(); const location = useLocation();
   const edit = questions.find(question => question.id === search.get("edit"));
-  return <Page title="Intake Questions"><BlockStack gap="400">
+  return <Page title="Intake Questions" subtitle="Extra details you ask customers for when they book an Event/Service"><BlockStack gap="400">
     {result && <Banner tone="critical">{result.error}{Object.values(result.fields).flat().map((error, i) => <p key={i}>{error}</p>)}</Banner>}
     <div className="bn-editor-layout"><Card><BlockStack gap="400"><Link to="?new=1">Add a question</Link>
       {!questions.length && <p>No intake questions yet.</p>}

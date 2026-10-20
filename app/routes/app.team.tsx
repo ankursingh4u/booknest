@@ -51,7 +51,7 @@ export async function action({ request }: ActionFunctionArgs) {
 export default function Team() {
   const { seats, staff, billed } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>();
-  return <Page title="Team Portal"><BlockStack gap="400">
+  return <Page title="Team Portal" subtitle="Invite your Availabilities to see and manage their own bookings"><BlockStack gap="400">
     {result?.error && <Banner tone="critical">{result.error}</Banner>}
     {result && "invitation" in result && result.invitation && <Banner tone="success"><p>Share this private invitation with the team member. It expires in 24 hours and works once.</p>
       <TextField label="Invitation link" value={result.invitation} readOnly onChange={() => {}} selectTextOnFocus autoComplete="off" /></Banner>}
