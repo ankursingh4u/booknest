@@ -54,12 +54,13 @@ export function AdminTimezoneField({ name, label, value = "", required = false, 
     options={[{ value: "", label: "Choose…" }, ...timezoneOptions]} />;
 }
 
-export function AdminMultiField({ name, label, selected, options }: {
-  name: string; label: string; selected: string[]; options: { value: string; label: string }[];
+export function AdminMultiField({ name, label, selected, options, required = false }: {
+  name: string; label: string; selected: string[]; options: { value: string; label: string }[]; required?: boolean;
 }) {
   const [current, setCurrent] = useState(selected);
-  if (!options.length) return <Labelled id={name} label={label}><p>Add a record first.</p></Labelled>;
-  return <ChoiceList title={label} name={name} allowMultiple selected={current} onChange={setCurrent}
+  const title = required ? label + " *" : label;
+  if (!options.length) return <Labelled id={name} label={title}><p>Add a record first.</p></Labelled>;
+  return <ChoiceList title={title} name={name} allowMultiple selected={current} onChange={setCurrent}
     choices={options.map(option => ({ value: option.value, label: option.label }))} />;
 }
 

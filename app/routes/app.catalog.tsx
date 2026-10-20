@@ -93,27 +93,32 @@ export default function Catalog() {
         <AdminTimezoneField name="timezone" label="Timezone" value={value.timezone ?? timezone} required /></>}
       {kind === "availabilities" && <>
         {field("firstName", "First name", "text", "", true)}{field("lastName", "Last name", "text", "", true)}
-        {field("email", "Email", "email", "", true)}{field("phone", "Phone", "tel")}
+        {field("email", "Email", "email", "", true)}
         <AdminTimezoneField name="timezone" label="Timezone" value={value.timezone ?? timezone} required />
-        {field("contactLink", "Contact Link", "url", "", false, "Your meeting or video call link.")}
-        {field("imageUrl", "Profile image URL", "url")}{field("bio", "Description", "textarea")}
-        <MultiField name="locationIds" label="Locations" selected={submitted?.locationIds ?? edit?.selected ?? []} options={locations} />
+        <MultiField name="locationIds" label="Locations" required selected={submitted?.locationIds ?? edit?.selected ?? []} options={locations} />
+        <details><summary>More details (optional)</summary><BlockStack gap="400">
+          {field("phone", "Phone", "tel")}
+          {field("contactLink", "Contact Link", "url", "", false, "Your meeting or video call link.")}
+          {field("imageUrl", "Profile image URL", "url")}{field("bio", "Description", "textarea")}
+        </BlockStack></details>
         <Link to="/app/schedules">Manage working hours and time off</Link>
       </>}
       {kind === "services" && edit && <>
         {field("title", "Event/Service name", "text", "", true)}{field("slug", "URL name", "text", "", true, "Lowercase words separated by hyphens.")}
         {field("description", "Description", "textarea")}
         <SelectField name="locationId" label="Location" value={value.locationId} options={locations} required />
-        <MultiField name="staffIds" label="Availabilities" selected={submitted?.staffIds ?? edit?.selected ?? []} options={staff} />
-        <div className="bn-form-grid">{field("durationMin", "Duration (minutes)", "number", "60", true)}{field("capacity", "Seats per time", "number", "1", true)}
-        {field("slotIntervalMin", "Slot interval (minutes)", "number", "", false, "Leave blank to offer starts at the Event/Service duration.")}
-        {field("bufferBefore", "Buffer before (minutes)", "number", "0")}{field("bufferAfter", "Buffer after (minutes)", "number", "0")}</div>
+        <MultiField name="staffIds" label="Availabilities" required selected={submitted?.staffIds ?? edit?.selected ?? []} options={staff} />
+        <div className="bn-form-grid">{field("durationMin", "Duration (minutes)", "number", "60", true)}{field("capacity", "Seats per time", "number", "1", true)}</div>
         <ProductSetup initialVariant={value.variantId ?? ""} initialPrice={value.price ?? "0.00"} creationKey={submitted?.creationKey || creationKey} initialMode={value.productMode === "new" ? "new" : "existing"} currency={currency} errors={result?.fields} />
-        <SelectField name="depositType" label="Payment" value={value.depositType ?? "NONE"} options={[{ value: "NONE", label: "Full payment at checkout" }, { value: "FULL", label: "Full payment" }, { value: "FIXED", label: "Fixed deposit" }, { value: "PERCENT", label: "Percentage deposit" }]} />
-        {field("depositValue", "Deposit amount or percentage", "text", "0")}
-        <div className="bn-form-grid">{field("minNoticeHours", "Minimum notice (hours)", "number", "1")}{field("maxAdvanceDays", "Booking window (days)", "number", "60")}</div>
-        <div className="bn-form-grid">{field("customerCancelCutoffHours", "Customer cancellation cutoff (hours)", "number", "0", false, "Customers can cancel until this many hours before the booking.")}
-        {field("customerRescheduleCutoffHours", "Customer reschedule cutoff (hours)", "number", "0", false, "Customers can reschedule until this many hours before the booking.")}</div>
+        <details><summary>Advanced settings (optional)</summary><BlockStack gap="400">
+          {field("slotIntervalMin", "Slot interval (minutes)", "number", "", false, "Leave blank to offer starts at the Event/Service duration.")}
+          <div className="bn-form-grid">{field("bufferBefore", "Buffer before (minutes)", "number", "0")}{field("bufferAfter", "Buffer after (minutes)", "number", "0")}</div>
+          <SelectField name="depositType" label="Payment" value={value.depositType ?? "NONE"} options={[{ value: "NONE", label: "Full payment at checkout" }, { value: "FULL", label: "Full payment" }, { value: "FIXED", label: "Fixed deposit" }, { value: "PERCENT", label: "Percentage deposit" }]} />
+          {field("depositValue", "Deposit amount or percentage", "text", "0")}
+          <div className="bn-form-grid">{field("minNoticeHours", "Minimum notice (hours)", "number", "1")}{field("maxAdvanceDays", "Booking window (days)", "number", "60")}</div>
+          <div className="bn-form-grid">{field("customerCancelCutoffHours", "Customer cancellation cutoff (hours)", "number", "0", false, "Customers can cancel until this many hours before the booking.")}
+          {field("customerRescheduleCutoffHours", "Customer reschedule cutoff (hours)", "number", "0", false, "Customers can reschedule until this many hours before the booking.")}</div>
+        </BlockStack></details>
       </>}
       <SaveButton>{edit ? "Save changes" : "Create"}</SaveButton>
     </Form></Card>}</div>
@@ -179,7 +184,7 @@ function ServiceWizard({ locations, staff, currency, creationKey, result, onClos
           <div className="bn-form-grid">{field("bufferBefore", "Buffer before (minutes)", "number", "0")}{field("bufferAfter", "Buffer after (minutes)", "number", "0")}</div>
         </BlockStack></div>
         <div style={{ display: step === 4 ? undefined : "none" }}>
-          <MultiField name="staffIds" label="Availabilities" selected={submitted?.staffIds ?? []} options={staff} />
+          <MultiField name="staffIds" label="Availabilities" required selected={submitted?.staffIds ?? []} options={staff} />
         </div>
         <div style={{ display: step === 5 ? undefined : "none" }}><BlockStack gap="400">
           {offeringKind === "paid" ? <ProductSetup initialVariant="" initialPrice="0.00" creationKey={submitted?.creationKey || creationKey} initialMode="existing" currency={currency} errors={errors} />
