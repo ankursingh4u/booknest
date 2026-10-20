@@ -28,8 +28,24 @@ export function AdminSelectField({ name, label, value = "", options, required = 
     options={[{ value: "", label: "Choose…" }, ...options]} />;
 }
 
-const timezoneOptions = (typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [])
-  .map(zone => ({ value: zone, label: zone.replaceAll("_", " ") }));
+// One representative IANA zone per distinct UTC offset currently in use worldwide (~38),
+// instead of every city Intl.supportedValuesOf("timeZone") returns (~400, mostly duplicates
+// of the same offset/DST rules). The IANA name is still what's stored, so DST stays correct.
+const representativeTimezones = [
+  "Etc/GMT+12", "Pacific/Pago_Pago", "Pacific/Honolulu", "Pacific/Marquesas", "America/Anchorage",
+  "America/Los_Angeles", "America/Denver", "America/Chicago", "America/New_York", "America/Halifax",
+  "America/St_Johns", "America/Sao_Paulo", "Atlantic/South_Georgia", "Atlantic/Azores", "Europe/London",
+  "Europe/Paris", "Africa/Cairo", "Europe/Moscow", "Asia/Tehran", "Asia/Dubai", "Asia/Kabul",
+  "Asia/Karachi", "Asia/Kolkata", "Asia/Kathmandu", "Asia/Dhaka", "Asia/Yangon", "Asia/Bangkok",
+  "Asia/Shanghai", "Asia/Singapore", "Australia/Eucla", "Asia/Tokyo", "Australia/Adelaide",
+  "Australia/Sydney", "Australia/Lord_Howe", "Pacific/Noumea", "Pacific/Auckland", "Pacific/Chatham",
+  "Pacific/Tongatapu", "Pacific/Kiritimati",
+];
+const offsetLabel = (zone: string) => {
+  try { return new Intl.DateTimeFormat("en", { timeZone: zone, timeZoneName: "shortOffset" }).formatToParts(new Date()).find(part => part.type === "timeZoneName")?.value ?? ""; }
+  catch { return ""; }
+};
+const timezoneOptions = representativeTimezones.map(zone => ({ value: zone, label: zone.replaceAll("_", " ") + " (" + offsetLabel(zone) + ")" }));
 export function AdminTimezoneField({ name, label, value = "", required = false, help }: {
   name: string; label: string; value?: string; required?: boolean; help?: string;
 }) {
