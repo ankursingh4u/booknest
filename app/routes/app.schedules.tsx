@@ -79,7 +79,7 @@ export default function Schedules() {
     {result && <Banner tone="critical"><p>{result.error}</p>{Object.entries(result.fields).map(([key, errors]) => errors?.map(error => <p key={key + error}>{error}</p>))}</Banner>}
     <div className="bn-form-grid"><Card><Form method="post" className="bn-form" key={"rule-" + location.key}>
       <Text as="h2" variant="headingMd">Add weekly hours</Text><input type="hidden" name="intent" value="rule.save" />
-      <p>Recurring hours that repeat every week. Use this for an Availability who works the same hours every week, indefinitely.</p>
+      <p>Recurring hours that repeat every week. Use this for an Availability who works the same hours every week, indefinitely.{!rules.length && " Add working hours before accepting bookings."}</p>
       <SelectField name="staffId" label="Availability" options={staff} />
       <SelectField name="serviceId" label="Event/Service" options={services} />
       <SelectField name="weekday" label="Day" value="1" required options={weekdays.map((label, value) => ({ label, value: String(value) }))} />
@@ -95,47 +95,45 @@ export default function Schedules() {
       <AdminTimezoneField name="timezone" label="Timezone" value={timezone} required /><Field name="reason" label="Reason" />
       <SaveButton>Add time off</SaveButton>
     </Form></Card></div>
-    <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Weekly hours</Text>
-      {!rules.length && <p>Add working hours before accepting bookings.</p>}
+    {rules.length > 0 && <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Weekly hours</Text>
       {rules.map(rule => <article className="bn-record" key={rule.id}><div><strong>{rule.staffId ? name(rule.staffId, staff) : name(rule.serviceId, services)}</strong>
         <p>{weekdays[rule.weekday]} · {rule.startTime}–{rule.endTime} · {rule.timezone}</p></div><RecordAction id={rule.id} intent="rule.delete">Remove</RecordAction></article>)}
-    </BlockStack></Card>
-    <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Upcoming closures and time off</Text>
-      {!blackouts.length && <p>No upcoming time off.</p>}
+    </BlockStack></Card>}
+    {blackouts.length > 0 && <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Upcoming closures and time off</Text>
       {blackouts.map(item => <article className="bn-record" key={item.id}><div><strong>{item.reason || "Time off"}</strong>
         <p>{name(item.staffId, staff)} · {name(item.locationId, locations)}</p>
         <p>{format(item.startAt, timezone)} – {format(item.endAt, timezone)}</p></div>
         <RecordAction id={item.id} intent="blackout.delete">Remove</RecordAction></article>)}
-    </BlockStack></Card>
-    <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Time-off requests</Text>
-      {!timeOff.length && <p>No pending or approved time-off requests.</p>}
+    </BlockStack></Card>}
+    {timeOff.length > 0 && <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Time-off requests</Text>
       {timeOff.map(item => <article className="bn-record" key={item.id}><div><strong>{item.staff.firstName} {item.staff.lastName}</strong>
         <p>{DateTime.fromISO(typeof item.startAt === "string" ? item.startAt : item.startAt.toISOString()).setZone(timezone).toFormat("dd LLL yyyy, HH:mm")} – {DateTime.fromISO(typeof item.endAt === "string" ? item.endAt : item.endAt.toISOString()).setZone(timezone).toFormat("dd LLL yyyy, HH:mm")}</p>
         <p>{item.reason} · {item.status}</p></div>{item.status === "APPROVED" && <RecordAction id={item.id} intent="timeoff.revoke">Remove approval</RecordAction>}{item.status === "PENDING" && <div className="bn-heading-row"><RecordAction id={item.id} intent="timeoff.approve">Approve</RecordAction><RecordAction id={item.id} intent="timeoff.decline">Decline</RecordAction></div>}
       </article>)}
-    </BlockStack></Card>
-    <Card><Form method="post" className="bn-form" key={"additional-" + location.key}>
-      <Text as="h2" variant="headingMd">Add opening hours for one date</Text><input type="hidden" name="intent" value="additional.save" />
-      <p>For a single extra date only - not for regular availability. Weekly hours still apply on top of this. Closures, time off, calendar conflicts, and Event/Service booking hours still limit available times.</p>
-      <div className="bn-form-grid">
-        <SelectField name="locationId" label="Location" options={locations} required />
-        <SelectField name="staffId" label="Availability (blank for everyone at this location)" options={staff} />
-        <Field name="date" label="Date" type="date" required />
-        <AdminTimezoneField name="timezone" label="Timezone" value={timezone} required />
-        <Field name="startTime" label="Opens" type="time" value="09:00" required />
-        <Field name="endTime" label="Closes" type="time" value="17:00" required />
-      </div>
-      <p>If the closing time is earlier than the opening time, it falls on the next date.</p>
-      <Field name="note" label="Note" /><SaveButton>Add opening hours</SaveButton>
-    </Form></Card>
-    <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Additional opening hours</Text>
-      {!additionalHours.length && <p>No upcoming additional openings.</p>}
+    </BlockStack></Card>}
+    <Card><details><summary><Text as="span" variant="headingMd" fontWeight="semibold">Add opening hours for one date (optional)</Text></summary>
+      <Form method="post" className="bn-form" key={"additional-" + location.key}>
+        <input type="hidden" name="intent" value="additional.save" />
+        <p>For a single extra date only - not for regular availability. Weekly hours still apply on top of this. Closures, time off, calendar conflicts, and Event/Service booking hours still limit available times.</p>
+        <div className="bn-form-grid">
+          <SelectField name="locationId" label="Location" options={locations} required />
+          <SelectField name="staffId" label="Availability (blank for everyone at this location)" options={staff} />
+          <Field name="date" label="Date" type="date" required />
+          <AdminTimezoneField name="timezone" label="Timezone" value={timezone} required />
+          <Field name="startTime" label="Opens" type="time" value="09:00" required />
+          <Field name="endTime" label="Closes" type="time" value="17:00" required />
+        </div>
+        <p>If the closing time is earlier than the opening time, it falls on the next date.</p>
+        <Field name="note" label="Note" /><SaveButton>Add opening hours</SaveButton>
+      </Form>
+    </details></Card>
+    {additionalHours.length > 0 && <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Additional opening hours</Text>
       {additionalHours.map(item => <article className="bn-record" key={item.id}><div>
         <strong>{item.staff ? item.staff.firstName + " " + item.staff.lastName : "All Availabilities"} · {item.location.name}</strong>
         <p>{format(item.startAt, item.timezone)} – {format(item.endAt, item.timezone)} · {item.timezone}</p>{item.note && <p>{item.note}</p>}
       </div><RecordAction id={item.id} intent="additional.delete">Remove</RecordAction></article>)}
       {additionalHours.length >= 500 && <p>Showing the first 500 upcoming openings.</p>}
       <p>Removing opening hours leaves existing appointments in place.</p>
-    </BlockStack></Card>
+    </BlockStack></Card>}
   </BlockStack></Page>;
 }
