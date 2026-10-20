@@ -19,6 +19,9 @@ export const streamTimeout = 10000;
 export default function handleRequest(request: Request, responseStatusCode: number, responseHeaders: Headers, context: EntryContext) {
   addDocumentResponseHeaders(request, responseHeaders);
   responseHeaders.set("Content-Type", "text/html; charset=utf-8");
+  // The embedded iframe otherwise lets Shopify admin or the browser cache a stale
+  // document that still references a previous deploy's hashed JS/CSS filenames.
+  responseHeaders.set("Cache-Control", "no-store");
 
   return new Promise<Response>((resolve, reject) => {
     const body = new PassThrough();
