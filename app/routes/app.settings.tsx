@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Form, redirect, useActionData, useLoaderData, useSearchParams } from "react-router";
+import { Form, Link, redirect, useActionData, useLoaderData, useSearchParams } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Page, Card, BlockStack, Text, Banner } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
@@ -41,6 +41,16 @@ export default function Settings() {
     </BlockStack></Card>
     <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Email notifications</Text>
       <p>{emailConfigured ? "Confirmation, reschedule, cancellation, and reminder emails are configured." : "Email delivery needs sender configuration before customers can receive booking messages."}</p>
+      <Link to="/app/notifications">Edit email templates</Link>
+    </BlockStack></Card>
+    <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">More tools</Text>
+      <p>Less-frequent setup and configuration pages.</p>
+      <div className="bn-heading-row">
+        <Link to="/app/setup">Setup guide</Link>
+        <Link to="/app/intake">Intake Questions</Link>
+        <Link to="/app/calendar">Google Calendar</Link>
+        <Link to="/app/support">Support</Link>
+      </div>
     </BlockStack></Card>
   </BlockStack></Page>;
 }

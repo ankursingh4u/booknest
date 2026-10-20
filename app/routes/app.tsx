@@ -18,19 +18,14 @@ export default function App() {
     <PolarisProvider i18n={translations}>
       <NavMenu>
         <Link to="/app" rel="home">Bookings</Link>
-        <Link to="/app/setup">Setup guide</Link>
         <Link to="/app/manage/services">Events/Services</Link>
         <Link to="/app/manage/availabilities">Availabilities</Link>
         <Link to="/app/manage/locations">Locations</Link>
         <Link to="/app/schedules">Schedules</Link>
-        <Link to="/app/intake">Intake Questions</Link>
-        <Link to="/app/notifications">Notifications</Link>
         <Link to="/app/insights">Insights</Link>
         <Link to="/app/team">Team Portal</Link>
-        <Link to="/app/calendar">Google Calendar</Link>
         <Link to="/app/billing">Account and plan</Link>
         <Link to="/app/settings">Settings</Link>
-        <Link to="/app/support">Support</Link>
       </NavMenu>
       <Outlet />
     </PolarisProvider>
