@@ -60,8 +60,12 @@ export function AdminMultiField({ name, label, selected, options, required = fal
   const [current, setCurrent] = useState(selected);
   const title = required ? label + " *" : label;
   if (!options.length) return <Labelled id={name} label={title}><p>Add a record first.</p></Labelled>;
-  return <ChoiceList title={title} name={name} allowMultiple selected={current} onChange={setCurrent}
-    choices={options.map(option => ({ value: option.value, label: option.label }))} />;
+  return <>
+    {/* ChoiceList with allowMultiple submits as "name[]", not "name" - supply the real field via hidden inputs instead. */}
+    {current.map(value => <input key={value} type="hidden" name={name} value={value} />)}
+    <ChoiceList title={title} allowMultiple selected={current} onChange={setCurrent}
+      choices={options.map(option => ({ value: option.value, label: option.label }))} />
+  </>;
 }
 
 export function AdminCheckbox({ name, label, value, defaultChecked = false, onToggle }: {
