@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   db: {
     additionalHours: { create: vi.fn(), delete: vi.fn(), findUnique: vi.fn(), count: vi.fn() },
     location: { findFirst: vi.fn() }, staffMember: { findMany: vi.fn() }, reservation: { count: vi.fn() },
+    availabilityRule: { create: vi.fn(), update: vi.fn(), delete: vi.fn() },
   },
 }));
 vi.mock("../lib/auth/admin.server", () => ({ requireShop: mocks.auth }));
@@ -12,8 +13,8 @@ vi.mock("../db.server", () => ({ withShopTransaction: mocks.transaction }));
 vi.mock("../lib/admin/catalog.server", () => ({ catalogData: vi.fn(), CatalogError: class extends Error {} }));
 vi.mock("../lib/team/time-off.server", () => ({ decideTimeOff: vi.fn(), revokeTimeOff: vi.fn() }));
 import { action } from "./app.schedules";
-function args(values: Record<string, string>) {
-  const request = new Request("https://booknest.example/app/schedules", { method: "POST", body: new URLSearchParams(values) });
+function args(values: Record<string, string>, search = "") {
+  const request = new Request("https://booknest.example/app/schedules" + search, { method: "POST", body: new URLSearchParams(values) });
   return { request, url: new URL(request.url), pattern: "/app/schedules", params: {}, context: {} };
 }
 const values = { intent: "additional.save", locationId: "loc", staffId: "a", date: "2026-03-02", startTime: "09:00", endTime: "12:00", timezone: "UTC", note: "" };
@@ -63,5 +64,30 @@ describe("additional schedule hours", () => {
     mocks.db.additionalHours.findUnique.mockResolvedValue(null);
     await expect(action(args({ intent: "additional.delete", id: "foreign-hours" }))).rejects.toMatchObject({ status: 404 });
     expect(mocks.db.additionalHours.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe("weekly hours", () => {
+  it("saves a new rule for a single weekday", async () => {
+    await action(args({ intent: "rule.save", staffId: "a", weekday: "1", startTime: "09:00", endTime: "17:00", timezone: "UTC" }));
+    expect(mocks.db.availabilityRule.create).toHaveBeenCalledWith({ data: expect.objectContaining({ shopId: "shop", staffId: "a", weekday: 1, startTime: "09:00", endTime: "17:00" }) });
+  });
+  it("updates only the time range of an existing rule, not its owner or weekday", async () => {
+    await action(args({ intent: "rule.update", id: "rule-a", startTime: "10:00", endTime: "18:00" }));
+    expect(mocks.db.availabilityRule.update).toHaveBeenCalledWith({ where: { id: "rule-a" }, data: { startTime: "10:00", endTime: "18:00" } });
+  });
+  it("rejects an update where start and end times are equal", async () => {
+    const result = await action(args({ intent: "rule.update", id: "rule-a", startTime: "09:00", endTime: "09:00" }));
+    expect(result).toMatchObject({ data: { error: expect.any(String) } });
+    expect(mocks.db.availabilityRule.update).not.toHaveBeenCalled();
+  });
+  it("deletes a rule by id", async () => {
+    await action(args({ intent: "rule.delete", id: "rule-a" }));
+    expect(mocks.db.availabilityRule.delete).toHaveBeenCalledWith({ where: { id: "rule-a" } });
+  });
+  it("redirects back to the same owner's filtered view the request came from", async () => {
+    const result = await action(args({ intent: "rule.delete", id: "rule-a" }, "?staffId=a"));
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).headers.get("location")).toBe("/app/schedules?staffId=a");
   });
 });

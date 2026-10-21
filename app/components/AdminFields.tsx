@@ -29,18 +29,19 @@ export function AdminSelectField({ name, label, value = "", options, required = 
 }
 
 // Picking one of these two selects clears the other, since the server only accepts exactly one.
-export function AdminEitherSelectField({ firstName, firstLabel, firstValue = "", firstOptions, secondName, secondLabel, secondValue = "", secondOptions }: {
+export function AdminEitherSelectField({ firstName, firstLabel, firstValue = "", firstOptions, secondName, secondLabel, secondValue = "", secondOptions, onFirstChange, onSecondChange }: {
   firstName: string; firstLabel: string; firstValue?: string; firstOptions: { value: string; label: string }[];
   secondName: string; secondLabel: string; secondValue?: string; secondOptions: { value: string; label: string }[];
+  onFirstChange?: (value: string) => void; onSecondChange?: (value: string) => void;
 }) {
   const [first, setFirst] = useState(firstValue);
   const [second, setSecond] = useState(secondValue);
   return <>
     <Select label={firstLabel} name={firstName} id={firstName} value={first}
-      onChange={value => { setFirst(value); if (value) setSecond(""); }}
+      onChange={value => { setFirst(value); if (value) setSecond(""); onFirstChange?.(value); if (value) onSecondChange?.(""); }}
       options={[{ value: "", label: "Choose…" }, ...firstOptions]} />
     <Select label={secondLabel} name={secondName} id={secondName} value={second}
-      onChange={value => { setSecond(value); if (value) setFirst(""); }}
+      onChange={value => { setSecond(value); if (value) setFirst(""); onSecondChange?.(value); if (value) onFirstChange?.(""); }}
       options={[{ value: "", label: "Choose…" }, ...secondOptions]} />
   </>;
 }
@@ -63,11 +64,11 @@ const offsetLabel = (zone: string) => {
   catch { return ""; }
 };
 const timezoneOptions = representativeTimezones.map(zone => ({ value: zone, label: zone.replaceAll("_", " ") + " (" + offsetLabel(zone) + ")" }));
-export function AdminTimezoneField({ name, label, value = "", required = false, help }: {
-  name: string; label: string; value?: string; required?: boolean; help?: string;
+export function AdminTimezoneField({ name, label, value = "", required = false, help, onChangeValue }: {
+  name: string; label: string; value?: string; required?: boolean; help?: string; onChangeValue?: (value: string) => void;
 }) {
   const [current, setCurrent] = useState(value);
-  return <Select label={label} name={name} id={name} value={current} onChange={setCurrent} requiredIndicator={required} helpText={help}
+  return <Select label={label} name={name} id={name} value={current} onChange={value => { setCurrent(value); onChangeValue?.(value); }} requiredIndicator={required} helpText={help}
     options={[{ value: "", label: "Choose…" }, ...timezoneOptions]} />;
 }
 

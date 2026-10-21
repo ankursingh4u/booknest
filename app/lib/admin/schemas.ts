@@ -43,13 +43,15 @@ export const serviceSchema = z.object({
   ...value, priceCents: price, isPrivate: value.capacity === 1,
   depositValue: value.depositType === "PERCENT" ? depositValue / 100 : ["NONE", "FULL"].includes(value.depositType) ? 0 : depositValue,
 }));
-const wallTime = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/);
+export const wallTime = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/);
 export const ruleSchema = z.object({
-  staffId: optionalId, serviceId: optionalId, weekdays: z.array(int(0, 6)).min(1).max(7).transform(values => [...new Set(values)]), startTime: wallTime, endTime: wallTime, timezone: timezoneSchema,
+  staffId: optionalId, serviceId: optionalId, weekday: int(0, 6), startTime: wallTime, endTime: wallTime, timezone: timezoneSchema,
 }).superRefine((value, ctx) => {
   if (Boolean(value.staffId) === Boolean(value.serviceId)) ctx.addIssue({ code: "custom", path: ["staffId"], message: "Choose one Availability or one Event/Service." });
   if (value.startTime === value.endTime) ctx.addIssue({ code: "custom", path: ["endTime"], message: "Start and end times must differ." });
 });
+export const ruleUpdateSchema = z.object({ id: id, startTime: wallTime, endTime: wallTime })
+  .refine(value => value.startTime !== value.endTime, { message: "Start and end times must differ.", path: ["endTime"] });
 
 export const additionalHoursSchema = z.object({
   locationId: id, staffId: optionalId, note: optionalText(500),
@@ -96,6 +98,6 @@ export const blackoutSchema = z.object({
 }));
 export function formValues(form: FormData) {
   const values: Record<string, unknown> = Object.fromEntries(form);
-  for (const field of ["staffIds", "locationIds", "weekdays"]) values[field] = form.getAll(field).filter(value => typeof value === "string" && value);
+  for (const field of ["staffIds", "locationIds"]) values[field] = form.getAll(field).filter(value => typeof value === "string" && value);
   return values;
 }
