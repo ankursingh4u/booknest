@@ -19,10 +19,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
     db.timeOffRequest.findMany({ where: { status: { in: ["PENDING", "APPROVED"] }, endAt: { gte: DateTime.utc().toJSDate() } }, include: { staff: { select: { firstName: true, lastName: true } } }, orderBy: { startAt: "asc" }, take: 500 }),
     db.additionalHours.findMany({ where: { endAt: { gte: DateTime.utc().toJSDate() } }, include: { staff: { select: { firstName: true, lastName: true } }, location: { select: { name: true } } }, orderBy: { startAt: "asc" }, take: 500 }),
   ]);
-  return { additionalHours, timeOff, timezone: catalog.shop.timezone, rules, blackouts,
-    staff: catalog.staff.filter(s => s.active).map(s => ({ value: s.id, label: s.firstName + " " + s.lastName })),
+  const staff = catalog.staff.filter(s => s.active).map(s => ({ value: s.id, label: s.firstName + " " + s.lastName }));
+  const requestedStaffId = new URL(request.url).searchParams.get("staffId") ?? "";
+  return { additionalHours, timeOff, timezone: catalog.shop.timezone, rules, blackouts, staff,
     services: catalog.services.filter(s => s.active).map(s => ({ value: s.id, label: s.title })),
     locations: catalog.locations.filter(s => s.active).map(s => ({ value: s.id, label: s.name })),
+    prefillStaffId: staff.some(s => s.value === requestedStaffId) ? requestedStaffId : "",
   };
 }
 export async function action({ request }: ActionFunctionArgs) {
@@ -73,7 +75,7 @@ export async function action({ request }: ActionFunctionArgs) {
   } catch (error) { return formError(error); }
 }
 export default function Schedules() {
-  const { additionalHours, timeOff, timezone, rules, blackouts, staff, services, locations } = useLoaderData<typeof loader>();
+  const { additionalHours, timeOff, timezone, rules, blackouts, staff, services, locations, prefillStaffId } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>();
   const format = (value: Date | string, zone: string) => (typeof value === "string" ? DateTime.fromISO(value) : DateTime.fromJSDate(value)).setZone(zone).toFormat("dd LLL yyyy, HH:mm");
   const name = (id: string | null, options: { value: string; label: string }[]) => options.find(o => o.value === id)?.label ?? "All";
@@ -82,7 +84,7 @@ export default function Schedules() {
     <div className="bn-form-grid"><Card><Form method="post" className="bn-form">
       <Text as="h2" variant="headingMd">Add weekly hours</Text><input type="hidden" name="intent" value="rule.save" />
       <p>Recurring hours that repeat every week. Use this for an Availability who works the same hours every week, indefinitely. Choose an Availability <strong>or</strong> an Event/Service — picking one clears the other.{!rules.length && " Add working hours before accepting bookings."}</p>
-      <EitherSelectField firstName="staffId" firstLabel="Availability" firstOptions={staff} secondName="serviceId" secondLabel="Event/Service" secondOptions={services} />
+      <EitherSelectField firstName="staffId" firstLabel="Availability" firstValue={prefillStaffId} firstOptions={staff} secondName="serviceId" secondLabel="Event/Service" secondOptions={services} />
       <MultiField name="weekdays" label="Days" required selected={["1"]} options={weekdays.map((label, value) => ({ label, value: String(value) }))} />
       <p className="bn-muted">Open every day? Check all 7 - one submission adds all of them.</p>
       <Field name="startTime" label="Start time" type="time" value="09:00" required /><Field name="endTime" label="End time" type="time" value="17:00" required />

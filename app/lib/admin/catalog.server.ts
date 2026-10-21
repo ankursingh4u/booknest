@@ -8,6 +8,7 @@ export class CatalogError extends Error {}
 export const publicStaff = {
   id: true, firstName: true, lastName: true, email: true, phone: true, contactLink: true,
   imageUrl: true, bio: true, timezone: true, locationIds: true, active: true,
+  _count: { select: { availability: true } },
 } as const;
 export async function catalogData(shopId: string) {
   const db = getShopDatabase(shopId);

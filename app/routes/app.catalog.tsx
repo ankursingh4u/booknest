@@ -24,7 +24,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const stringify = (record: Record<string, unknown>) => Object.fromEntries(Object.entries(record).map(([key, value]) => [key, value == null ? "" : String(value)]));
   let rows: Row[];
   if (kind === "locations") rows = result.locations.map(item => ({ id: item.id, title: item.name, summary: item.timezone, active: item.active, values: stringify(item), selected: [] }));
-  else if (kind === "availabilities") rows = result.staff.map(item => ({ id: item.id, title: item.firstName + " " + item.lastName, summary: item.email, active: item.active, values: stringify(item), selected: item.locationIds }));
+  else if (kind === "availabilities") rows = result.staff.map(item => ({ id: item.id, title: item.firstName + " " + item.lastName, summary: item.email, active: item.active,
+    values: { ...stringify(item), hasHours: item._count.availability > 0 ? "1" : "" }, selected: item.locationIds }));
   else rows = result.services.map(item => ({ id: item.id, title: item.title, summary: item.durationMin + " min · " + item.capacity + " seat(s)", active: item.active,
     values: stringify({ ...item, price: (item.priceCents / 100).toFixed(2), depositValue: item.depositType === "PERCENT" ? item.depositValue : (item.depositValue / 100).toFixed(2) }),
     selected: item.staff.map(assignment => assignment.staffId) }));
@@ -79,9 +80,12 @@ export default function Catalog() {
         <p>{rows.length ? "Try a different search or switch tabs." : "Get started by adding a " + noun.toLowerCase() + "."}</p>
       </EmptyState></div> : <BlockStack gap="0">
         {visible.map(row => <article className="bn-record" key={row.id} style={{ padding: "0 var(--bn-space-4)" }}>
-          <div><Link to={"?edit=" + row.id}>{row.title}</Link><p>{row.summary}</p>{kind === "services" && <p>Event/Service ID: <code>{row.id}</code></p>}<Badge tone={row.active ? "success" : undefined}>{row.active ? "Active" : "Archived"}</Badge></div>
+          <div><Link to={"?edit=" + row.id}>{row.title}</Link><p>{row.summary}</p>{kind === "services" && <p>Event/Service ID: <code>{row.id}</code></p>}
+            <Badge tone={row.active ? "success" : undefined}>{row.active ? "Active" : "Archived"}</Badge>
+            {kind === "availabilities" && row.active && !row.values.hasHours && <Badge tone="warning">No working hours set</Badge>}
+          </div>
           <div className="bn-heading-row">
-            {kind === "availabilities" && row.active && <Button url="/app/schedules">Set working hours</Button>}
+            {kind === "availabilities" && row.active && <Button variant={row.values.hasHours ? undefined : "primary"} url={"/app/schedules?staffId=" + row.id}>Set working hours</Button>}
             <RecordAction id={row.id} intent={row.active ? "archive" : "restore"}>{row.active ? "Archive" : "Restore"}</RecordAction>
           </div>
         </article>)}
