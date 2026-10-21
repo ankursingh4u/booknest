@@ -16,6 +16,14 @@ describe("merchant input validation", () => {
     expect(serviceSchema.safeParse({ ...service, depositType: "PERCENT", depositValue: "101" }).success).toBe(false);
   });
   it("requires at least one assigned Availability", () => { expect(serviceSchema.safeParse({ ...service, staffIds: [] }).success).toBe(false); });
+  it("auto-generates a slug from the title when none is given", () => {
+    const { slug: _slug, ...withoutSlug } = service;
+    const parsed = serviceSchema.parse(withoutSlug);
+    expect(parsed.slug).toMatch(/^yoga-[a-z0-9]{6}$/);
+  });
+  it("keeps an explicitly supplied slug unchanged, e.g. when editing an existing service", () => {
+    expect(serviceSchema.parse(service).slug).toBe("yoga");
+  });
   it("uses valid IANA timezones", () => {
     expect(locationSchema.safeParse({ name: "Studio", timezone: "Asia/Kolkata" }).success).toBe(true);
     expect(locationSchema.safeParse({ name: "Studio", timezone: "Invalid/Zone" }).success).toBe(false);

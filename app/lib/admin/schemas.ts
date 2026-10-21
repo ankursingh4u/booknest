@@ -21,9 +21,11 @@ export const staffSchema = z.object({
   phone: optionalText(50), contactLink: optionalUrl, imageUrl: optionalUrl, bio: optionalText(2000),
   timezone: timezoneSchema, locationIds: z.array(id).min(1).max(50).transform(ids => [...new Set(ids)]),
 });
+const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "event";
 export const serviceSchema = z.object({
   productMode: z.enum(["existing", "new"]).default("existing"),
-  title: text(160).min(1), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100),
+  title: text(160).min(1),
+  slug: z.preprocess(value => value === "" || value == null ? undefined : value, z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100).optional()),
   description: optionalText(5000), locationId: id, staffIds: z.array(id).min(1).max(50).transform(ids => [...new Set(ids)]),
   slotIntervalMin: z.preprocess(value => value === "" || value == null ? null : value, int(1, 1440).nullable()).default(null),
   customerCancelCutoffHours: int(0, 8760).default(0), customerRescheduleCutoffHours: int(0, 8760).default(0),
@@ -39,8 +41,9 @@ export const serviceSchema = z.object({
     ctx.addIssue({ code: "custom", path: ["depositValue"], message: "Fixed deposit must be greater than zero and no more than the price." });
   if (value.depositType === "PERCENT" && (value.depositValue <= 0 || value.depositValue > 10000 || value.depositValue % 100 !== 0))
     ctx.addIssue({ code: "custom", path: ["depositValue"], message: "Percentage must be a whole number from 1 to 100." });
-}).transform(({ price, depositValue, ...value }) => ({
+}).transform(({ price, depositValue, slug, ...value }) => ({
   ...value, priceCents: price, isPrivate: value.capacity === 1,
+  slug: slug ?? slugify(value.title) + "-" + Math.random().toString(36).slice(2, 8),
   depositValue: value.depositType === "PERCENT" ? depositValue / 100 : ["NONE", "FULL"].includes(value.depositType) ? 0 : depositValue,
 }));
 export const wallTime = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/);

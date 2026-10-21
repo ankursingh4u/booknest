@@ -117,9 +117,11 @@ export default function Catalog() {
         </> : <p className="bn-muted">Save this Availability first, then set their weekly hours here.</p>}
       </>}
       {kind === "services" && edit && <>
-        {field("title", "Event/Service name", "text", "", true)}{field("slug", "URL name", "text", "", true, "Lowercase words separated by hyphens.")}
-        {field("description", "Description", "textarea")}
-        <SelectField name="locationId" label="Location" value={value.locationId} options={locations} required />
+        {field("title", "Event/Service name", "text", "", true)}
+        <input type="hidden" name="slug" value={value.slug ?? ""} />
+        {locations.length > 1
+          ? <SelectField name="locationId" label="Location" value={value.locationId} options={locations} required />
+          : <input type="hidden" name="locationId" value={locations[0]?.value ?? ""} />}
         <MultiField name="staffIds" label="Availabilities" required selected={submitted?.staffIds ?? edit?.selected ?? []} options={staff} />
         <div className="bn-form-grid">{field("durationMin", "Duration (minutes)", "number", "60", true)}{field("capacity", "Seats per time", "number", "1", true)}</div>
         <ProductSetup initialVariant={value.variantId ?? ""} initialPrice={value.price ?? "0.00"} creationKey={submitted?.creationKey || creationKey} initialMode={value.productMode === "new" ? "new" : "existing"} currency={currency} errors={result?.fields} />
@@ -131,6 +133,7 @@ export default function Catalog() {
           <small>Opens the theme editor directly on this Event/Service's product page, with the booking block ready to add.</small>
         </div>}
         <details><summary>Advanced settings (optional)</summary><BlockStack gap="400">
+          {field("description", "Description", "textarea")}
           {field("slotIntervalMin", "Slot interval (minutes)", "number", "", false, "Leave blank to offer starts at the Event/Service duration.")}
           <div className="bn-form-grid">{field("bufferBefore", "Buffer before (minutes)", "number", "0")}{field("bufferAfter", "Buffer after (minutes)", "number", "0")}</div>
           <SelectField name="depositType" label="Payment" value={value.depositType ?? "NONE"} options={[{ value: "NONE", label: "Full payment at checkout" }, { value: "FULL", label: "Full payment" }, { value: "FIXED", label: "Fixed deposit" }, { value: "PERCENT", label: "Percentage deposit" }]} />
@@ -182,9 +185,9 @@ function ServiceWizard({ locations, staff, currency, creationKey, result, onClos
         </BlockStack></div>
         <div style={{ display: step === 2 ? undefined : "none" }}><BlockStack gap="400">
           {field("title", "Event/Service name", "text", "", true)}
-          {field("slug", "URL name", "text", "", true, "Lowercase words separated by hyphens.")}
-          {field("description", "Description", "textarea")}
-          <SelectField name="locationId" label="Location" options={locations} required />
+          {locations.length > 1
+            ? <SelectField name="locationId" label="Location" options={locations} required />
+            : <input type="hidden" name="locationId" value={locations[0]?.value ?? ""} />}
         </BlockStack></div>
         <div style={{ display: step === 3 ? undefined : "none" }}><BlockStack gap="400">
           <Text as="p" fontWeight="semibold">Appointment length</Text>
@@ -214,6 +217,7 @@ function ServiceWizard({ locations, staff, currency, creationKey, result, onClos
           <div className="bn-form-grid">{field("minNoticeHours", "Minimum notice (hours)", "number", "1")}{field("maxAdvanceDays", "Booking window (days)", "number", "60")}</div>
           <div className="bn-form-grid">{field("customerCancelCutoffHours", "Customer cancellation cutoff (hours)", "number", "0", false, "Customers can cancel until this many hours before the booking.")}
           {field("customerRescheduleCutoffHours", "Customer reschedule cutoff (hours)", "number", "0", false, "Customers can reschedule until this many hours before the booking.")}</div>
+          <details><summary>More details (optional)</summary>{field("description", "Description", "textarea")}</details>
         </BlockStack></div>
         {result && <Banner tone="critical"><p>{result.error}</p>{Object.entries(result.fields).map(([name, fieldErrors]) => fieldErrors?.map(error => <p key={name + error}>{name}: {error}</p>))}</Banner>}
       </Form>
