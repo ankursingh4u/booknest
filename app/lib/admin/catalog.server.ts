@@ -23,13 +23,16 @@ export async function catalogData(shopId: string) {
   }
   if (await db.staffMember.count() === 0) {
     const locationId = defaultLocationId ?? (await db.location.findFirst({ select: { id: true } }))!.id;
-    const created = await db.staffMember.create({ data: {
+    await db.staffMember.create({ data: {
       firstName: storeDisplayName(shop.domain), lastName: "", email: shop.email || "owner@" + shop.domain,
       timezone: shop.timezone, locationIds: [locationId], shopId,
     } });
-    // Monday-Friday, 9-5, matches the reference app's own default for a brand-new Availability.
+  }
+  // Monday-Friday, 9-5, matches the reference app's own default. Covers a brand-new Availability
+  // and backfills anyone created before this default existed, not just the bootstrap record above.
+  for (const member of await db.staffMember.findMany({ where: { active: true, availability: { none: {} } }, select: { id: true, timezone: true } })) {
     await db.availabilityRule.createMany({ data: [1, 2, 3, 4, 5].map(weekday => ({
-      staffId: created.id, weekday, startTime: "09:00", endTime: "17:00", timezone: shop.timezone, shopId,
+      staffId: member.id, weekday, startTime: "09:00", endTime: "17:00", timezone: member.timezone, shopId,
     })) });
   }
   const [locations, staff, services] = await Promise.all([

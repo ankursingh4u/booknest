@@ -101,7 +101,7 @@ describe("default location and Availability bootstrap", () => {
     state.db.location.findMany = vi.fn().mockResolvedValue([{ id: "loc", name: "Main location", timezone: "Asia/Kolkata" }]);
     state.db.staffMember.count = vi.fn().mockResolvedValue(0);
     state.db.staffMember.create = vi.fn().mockResolvedValue({ id: "staff" });
-    state.db.staffMember.findMany = vi.fn().mockResolvedValue([]);
+    state.db.staffMember.findMany = vi.fn().mockResolvedValue([{ id: "staff", timezone: "Asia/Kolkata" }]);
     state.db.availabilityRule = { createMany: vi.fn().mockResolvedValue({ count: 5 }) };
     state.db.service.findMany = vi.fn().mockResolvedValue([]);
   });
@@ -128,11 +128,12 @@ describe("default location and Availability bootstrap", () => {
   });
   it("never creates a second default Availability once one already exists", async () => {
     state.db.staffMember.count.mockResolvedValue(1);
+    state.db.staffMember.findMany.mockResolvedValue([]);
     await catalogData(shopId);
     expect(state.db.staffMember.create).not.toHaveBeenCalled();
     expect(state.db.availabilityRule.createMany).not.toHaveBeenCalled();
   });
-  it("seeds Monday-Friday 9-5 hours for the new default Availability", async () => {
+  it("seeds Monday-Friday 9-5 hours for a new default Availability", async () => {
     await catalogData(shopId);
     expect(state.db.availabilityRule.createMany).toHaveBeenCalledWith({ data: [1, 2, 3, 4, 5].map(weekday => ({
       staffId: "staff", weekday, startTime: "09:00", endTime: "17:00", timezone: "Asia/Kolkata", shopId,
@@ -143,5 +144,14 @@ describe("default location and Availability bootstrap", () => {
     await catalogData(shopId);
     expect(state.db.location.create).not.toHaveBeenCalled();
     expect(state.db.staffMember.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ locationIds: ["loc"] }) }));
+  });
+  it("backfills hours for a pre-existing Availability that predates this default, not just a brand-new one", async () => {
+    state.db.staffMember.count.mockResolvedValue(1);
+    state.db.staffMember.findMany.mockResolvedValue([{ id: "existing-staff", timezone: "America/New_York" }]);
+    await catalogData(shopId);
+    expect(state.db.staffMember.create).not.toHaveBeenCalled();
+    expect(state.db.availabilityRule.createMany).toHaveBeenCalledWith({ data: [1, 2, 3, 4, 5].map(weekday => ({
+      staffId: "existing-staff", weekday, startTime: "09:00", endTime: "17:00", timezone: "America/New_York", shopId,
+    })) });
   });
 });
