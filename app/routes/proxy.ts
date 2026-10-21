@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
 import { findShopIdentity, getShopDatabase } from "../db.server";
-import { createBooking, createReservation, listDaySlots, listMonthAvailability } from "../lib/bookings/service.server";
+import { createBooking, createReservation, joinWaitlist, listDaySlots, listMonthAvailability } from "../lib/bookings/service.server";
 import { BookingError } from "../lib/bookings/validation";
 import { depositCheckout } from "../lib/bookings/deposit.server";
 import { paymentDue, reservationProperties } from "../lib/bookings/checkout";
@@ -65,6 +65,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       const booking = await createBooking(shop.id, parsed.booking, parsed.customer, "free");
       return json({ id: booking.id, startAt: booking.startAt, endAt: booking.endAt, status: booking.status });
     }
+    if (params.endpoint === "waitlist") { const entry = await joinWaitlist(shop.id, values); return json({ id: entry.id }, 201); }
     if (params.endpoint !== "holds") return json({ error: "Not found." }, 404);
     const hold = await createReservation(shop.id, values, undefined, (id, cents) => verifyBookingVariant(admin, id, cents));
     if (["FIXED", "PERCENT"].includes(hold.depositType)) return json({ reservationId: hold.id, expiresAt: hold.expiresAt, checkoutUrl: await depositCheckout(shop.id, hold.id, admin) });

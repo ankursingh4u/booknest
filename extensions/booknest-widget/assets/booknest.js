@@ -57,6 +57,20 @@
       }
     };
   }
+  function parseThemeColor(value) {
+    const trimmed = (value || "").trim();
+    if (/^#[a-fA-F0-9]{6}$/.test(trimmed)) return trimmed;
+    if (/^#[a-fA-F0-9]{3}$/.test(trimmed)) {
+      const [r, g, b] = trimmed.slice(1).split("");
+      return "#" + r + r + g + g + b + b;
+    }
+    const rgbMatch = trimmed.match(/^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i);
+    const channels = rgbMatch ? [rgbMatch[1], rgbMatch[2], rgbMatch[3]]
+      : /^[\d.]+(?:[,\s]+[\d.]+){2}$/.test(trimmed) ? trimmed.split(/[,\s]+/) : null;
+    if (!channels || channels.some(channel => Number.isNaN(Number(channel)))) return null;
+    const toHex = channel => Math.max(0, Math.min(255, Math.round(Number(channel)))).toString(16).padStart(2, "0");
+    return "#" + channels.map(toHex).join("");
+  }
   function accentPresentation(hex, dark = false) {
     const luminance = color => {
       const channels = [1, 3, 5].map(index => parseInt(color.slice(index, index + 2), 16) / 255)
@@ -94,7 +108,7 @@
       history.delete(button);
     }
   }
-  const core = { activeVariant, variantGate, variantResolver, monthDates, shiftMonth, shiftDay, weekday, calendarKeyDate, claimNativeForm, isHoldActive, accentPresentation, setNativeVisibility, request };
+  const core = { activeVariant, variantGate, variantResolver, monthDates, shiftMonth, shiftDay, weekday, calendarKeyDate, claimNativeForm, isHoldActive, accentPresentation, parseThemeColor, setNativeVisibility, request };
   if (typeof document === "undefined" && typeof module !== "undefined" && module.exports) { module.exports = core; return; }
   if (window.__booknestLoaded) return;
   window.__booknestLoaded = true;
@@ -129,8 +143,13 @@
     if (root.dataset.initialized) return;
     root.dataset.initialized = "true";
     const prefix = "bn-" + (root.dataset.blockId || crypto.randomUUID()).replace(/[^a-zA-Z0-9-]/g, "");
-    if (/^#[a-fA-F0-9]{6}$/.test(root.dataset.accent || "")) root.style.setProperty("--bn-accent", root.dataset.accent);
-    const accent = accentPresentation(root.dataset.accent, root.dataset.theme === "contrast");
+    const defaultAccent = "#253f8e";
+    const configuredAccent = /^#[a-fA-F0-9]{6}$/.test(root.dataset.accent || "") ? root.dataset.accent : defaultAccent;
+    // Merchants who never touched the Accent setting get the theme's own button color automatically, matching native buttons instead of a fixed app blue.
+    const themeAccent = configuredAccent === defaultAccent ? parseThemeColor(getComputedStyle(root).getPropertyValue("--color-button")) : null;
+    const effectiveAccent = themeAccent || configuredAccent;
+    root.style.setProperty("--bn-accent", effectiveAccent);
+    const accent = accentPresentation(effectiveAccent, root.dataset.theme === "contrast");
     root.style.setProperty("--bn-on-accent", accent.foreground); root.style.setProperty("--bn-focus", accent.focus);
     let catalog, chosen, selected, busy = false, catalogVersion = 0, slotVersion = 0, calendarVersion = 0, idempotencyKey = crypto.randomUUID();
     let questionInputs = [], visibleSlots = [], availableDays = new Map(), month = "", earliest = "", latest = "", returnFocus;
@@ -192,7 +211,7 @@
     const quantity = make("input", null, { type: "number", min: 1, step: 1, value: 1, required: true, inputmode: "numeric" });
     const details = make("p", "", { class: "bn-details" });
     const timezone = make("select", null, { "aria-label": "Booking timezone" });
-    const timeFormat = make("button", time24 ? "24-hour" : "AM/PM", { type: "button", class: "bn-secondary", "aria-label": "Switch time format", "aria-pressed": time24 });
+    const timeFormat = make("button", time24 ? "24-hour" : "AM/PM", { type: "button", class: "bn-secondary bn-pill-toggle", "aria-label": "Switch time format", "aria-pressed": time24 });
     const calendar = make("section", null, { class: "bn-calendar", "aria-label": "Choose a booking date" });
     const calendarNav = make("div", null, { class: "bn-calendar-nav" });
     const previousMonth = make("button", "‹", { type: "button", class: "bn-secondary", "aria-label": "Previous month" });
@@ -205,6 +224,20 @@
     const week = make("div", null, { class: "bn-week", "aria-label": "Dates this week" });
     calendar.append(calendarNav, calendarGrid, calendarLegend, nextAvailable, week);
     const slots = make("fieldset", null, { class: "bn-slots" });
+    const waitlistButton = make("button", "Don't see a spot available? Join the waitlist", { type: "button", class: "bn-link-button", hidden: true });
+    const waitlistEmail = make("input", null, { type: "email", placeholder: "Email address", "aria-label": "Email for the waitlist", required: true });
+    const waitlistSubmit = make("button", "Notify me", { type: "button", class: "bn-secondary" });
+    const waitlistForm = make("div", null, { class: "bn-waitlist", hidden: true });
+    waitlistForm.append(waitlistEmail, waitlistSubmit);
+    waitlistButton.addEventListener("click", () => { waitlistButton.hidden = true; waitlistForm.hidden = false; waitlistEmail.focus(); });
+    waitlistSubmit.addEventListener("click", async () => {
+      if (!waitlistEmail.checkValidity() || !chosen || !selectedDate) { waitlistEmail.reportValidity(); return; }
+      waitlistSubmit.disabled = true;
+      try {
+        await request(api + "/waitlist", { method: "POST", body: JSON.stringify({ serviceId: chosen.id, staffId: selected?.staffId, date: selectedDate, email: waitlistEmail.value }) });
+        waitlistForm.replaceChildren(make("p", "You're on the waitlist. We'll email you if a spot opens up.", { class: "bn-muted" }));
+      } catch (error) { waitlistSubmit.disabled = false; errors.textContent = error.message || "Could not join the waitlist. Please retry."; }
+    });
     const answers = make("div", null, { class: "bn-intake" });
     const customer = make("div", null, { class: "bn-customer" });
     const name = make("input", null, { type: "text", autocomplete: "name" });
@@ -222,7 +255,9 @@
     const controls = make("div", null, { class: "bn-controls" });
     field(controls, "Guests", quantity, "quantity"); field(controls, "Timezone", timezone, "timezone");
     controls.append(timeFormat);
-    form.append(controls, calendar, slots, answers);
+    const calendarSlots = make("div", null, { class: "bn-calendar-slots" });
+    calendarSlots.append(calendar, slots, waitlistButton, waitlistForm);
+    form.append(controls, calendarSlots, answers);
     field(customer, "Your name", name, "name"); field(customer, "Email", email, "email");
     actionBar.append(selectedSummary, submit);
     form.append(customer, actionBar);
@@ -311,13 +346,16 @@
           selected = slot; clearError(); updateButton();
         });
         const info = make("span", null, { class: "bn-slot-info" });
-        info.append(make("strong", clock(slot.startAt) + " – " + clock(slot.endAt)), make("span", slot.staffName), make("small", slot.remaining + "/" + chosen.capacity + " spots remaining"));
+        const text = make("span", null, { class: "bn-slot-text" });
+        text.append(make("strong", clock(slot.startAt) + " – " + clock(slot.endAt)), make("small", slot.staffName));
+        info.append(text, make("span", slot.remaining + "/" + chosen.capacity + " available", { class: "bn-slot-badge" }));
         label.append(radio, info); slots.append(label);
       }
     }
     async function loadSlots() {
       const generation = ++slotVersion;
       selected = null; visibleSlots = []; idempotencyKey = crypto.randomUUID(); updateButton(); drawSlots(); clearError();
+      waitlistButton.hidden = true; waitlistForm.hidden = true; waitlistSubmit.disabled = false; waitlistEmail.value = "";
       if (!chosen || !selectedDate || !quantity.checkValidity()) return;
       status.textContent = "Finding available times…";
       try {
@@ -325,6 +363,7 @@
         if (generation !== slotVersion) return;
         visibleSlots = response.slots; drawSlots();
         status.textContent = response.slots.length ? "Times shown in " + timezone.value + ". Choose a time to continue." : "No times available on this date. Try Find next available.";
+        waitlistButton.hidden = !!response.slots.length;
       } catch (error) { if (generation === slotVersion) failed(error, loadSlots); }
     }
     function focusCalendarDate(date, direction = 1, preferWeek = false) {

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DateTime, Settings } from "luxon";
 const state = vi.hoisted(() => ({ tx: {} as Record<string, any>, run: vi.fn() }));
 vi.mock("../../db.server", () => ({ getShopDatabase: () => state.tx, withShopTransaction: (...args: unknown[]) => state.run(...args) }));
-import { createBooking, createReservation, rescheduleBooking, cancelBooking } from "./service.server";
+import { createBooking, createReservation, rescheduleBooking, cancelBooking, joinWaitlist } from "./service.server";
 const input = { serviceId: "service", staffId: "staff", startAt: "2026-10-19T09:00:00Z", quantity: 1, idempotencyKey: "8adf23e1-653e-4ac4-8db7-e0cfe5350c28" };
 const customer = { email: "customer@example.com", name: "Customer" };
 const now = DateTime.fromISO("2026-10-18T00:00Z", { zone: "utc" });
@@ -13,7 +13,8 @@ beforeEach(() => {
   state.tx = {
     service: { findFirst: vi.fn().mockResolvedValue(service) }, location: { findFirst: vi.fn().mockResolvedValue({ id: "location", active: true, timezone: "UTC" }) },
     staffMember: { findMany: vi.fn().mockResolvedValue([{ id: "staff", firstName: "A", lastName: "B" }]) },
-    serviceStaff: { findMany: vi.fn().mockResolvedValue([{ staffId: "staff" }]) },
+    serviceStaff: { findMany: vi.fn().mockResolvedValue([{ staffId: "staff" }]), findFirst: vi.fn().mockResolvedValue({ serviceId: "service", staffId: "staff" }) },
+    waitlistEntry: { create: vi.fn().mockImplementation(({ data }) => ({ ...data, id: "waitlist-entry" })) },
     availabilityRule: { findMany: vi.fn().mockResolvedValue([{ staffId: "staff", serviceId: null, weekday: 1, startTime: "09:00", endTime: "12:00", timezone: "UTC" }]) },
     additionalHours: { findMany: vi.fn().mockResolvedValue([]) },
     blackout: { findMany: vi.fn().mockResolvedValue([]) }, timeOffRequest: { findMany: vi.fn().mockResolvedValue([]) },
@@ -192,5 +193,28 @@ describe("customer cutoff revalidation under the Availability lock", () => {
     const result = await cancelBooking("shop", "booking", { now: deadline });
     expect(result.status).toBe("CANCELLED");
     expect(state.tx.service.findFirstOrThrow).not.toHaveBeenCalled();
+  });
+});
+
+describe("waitlist", () => {
+  const waitlistValues = { serviceId: "service", staffId: "staff", date: "2026-10-19", email: "customer@example.com" };
+  it("records a full day's desired window in the location's own timezone", async () => {
+    const entry = await joinWaitlist("shop", waitlistValues, now);
+    expect(entry.customerEmail).toBe("customer@example.com");
+    expect(entry.desiredStart.toISOString()).toBe("2026-10-19T00:00:00.000Z");
+    expect(entry.desiredEnd.toISOString()).toBe("2026-10-19T23:59:59.999Z");
+  });
+  it("rejects a staff member not assigned to the Event/Service", async () => {
+    state.tx.serviceStaff.findFirst.mockResolvedValue(null);
+    await expect(joinWaitlist("shop", waitlistValues, now)).rejects.toThrow("assigned to this Event/Service");
+    expect(state.tx.waitlistEntry.create).not.toHaveBeenCalled();
+  });
+  it("rejects a past date", async () => {
+    await expect(joinWaitlist("shop", { ...waitlistValues, date: "2026-10-01" }, now)).rejects.toThrow("current or future date");
+    expect(state.tx.waitlistEntry.create).not.toHaveBeenCalled();
+  });
+  it("rejects a malformed email", async () => {
+    await expect(joinWaitlist("shop", { ...waitlistValues, email: "not-an-email" }, now)).rejects.toThrow();
+    expect(state.tx.waitlistEntry.create).not.toHaveBeenCalled();
   });
 });

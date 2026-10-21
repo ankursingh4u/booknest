@@ -75,6 +75,25 @@ export async function listMonthAvailability(shopId: string, serviceId: string, m
   return { timezone: result.displayTimezone, today: now.setZone(result.displayTimezone).toISODate()!,
     lastDate: now.setZone(result.location.timezone).plus({ days: result.service.maxAdvanceDays }).setZone(result.displayTimezone).toISODate()!, days };
 }
+const waitlistInput = z.object({
+  serviceId: z.string().min(1).max(100), staffId: z.string().min(1).max(100).optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), email: z.string().trim().email().max(254),
+});
+export async function joinWaitlist(shopId: string, values: unknown, now: DateTime = DateTime.utc()) {
+  const input = waitlistInput.parse(values);
+  const db = getShopDatabase(shopId);
+  const service = await db.service.findFirst({ where: { id: input.serviceId, active: true } });
+  if (!service) throw new BookingError("Event/Service not found.", 404);
+  const location = await db.location.findFirst({ where: { id: service.locationId, active: true } });
+  if (!location) throw new BookingError("This location is not accepting bookings.", 404);
+  if (input.staffId && !await db.serviceStaff.findFirst({ where: { serviceId: service.id, staffId: input.staffId } }))
+    throw new BookingError("Choose an Availability assigned to this Event/Service.", 400);
+  const day = DateTime.fromISO(input.date, { zone: location.timezone });
+  if (!day.isValid || day.toISODate() !== input.date) throw new BookingError("Choose a calendar date that exists in this timezone.", 400);
+  if (day.endOf("day") < now.setZone(location.timezone)) throw new BookingError("Choose a current or future date.", 400);
+  return db.waitlistEntry.create({ data: { shopId, serviceId: service.id, staffId: input.staffId ?? null, customerEmail: input.email,
+    desiredStart: day.startOf("day").toUTC().toJSDate(), desiredEnd: day.endOf("day").toUTC().toJSDate() } });
+}
 async function selection(db: Database, shopId: string, input: ReservationInput, now: DateTime, excludeBookingId?: string) {
   const service = await db.service.findFirst({ where: { id: input.serviceId, active: true } });
   if (!service) throw new BookingError("Event/Service not found.", 404);

@@ -84,6 +84,15 @@ describe("storefront booking safeguards", () => {
     expect(helpers.accentPresentation("#000000")).toEqual({ foreground: "#ffffff", focus: "#000000" });
     expect(helpers.accentPresentation("#000000", true)).toEqual({ foreground: "#ffffff", focus: "#ffffff" });
   });
+  it("reads a theme's native button color in any common CSS color-channel format", () => {
+    const helpers = core();
+    expect(helpers.parseThemeColor("#1a73e8")).toBe("#1a73e8");
+    expect(helpers.parseThemeColor("#fff")).toBe("#ffffff");
+    expect(helpers.parseThemeColor("rgb(26, 115, 232)")).toBe("#1a73e8");
+    expect(helpers.parseThemeColor("26, 115, 232")).toBe("#1a73e8");
+    expect(helpers.parseThemeColor("")).toBeNull();
+    expect(helpers.parseThemeColor("not-a-color")).toBeNull();
+  });
   it("uses a civil calendar across leap years and month boundaries", () => {
     const helpers = core();
     expect(helpers.monthDates("2028-02")).toHaveLength(29);
