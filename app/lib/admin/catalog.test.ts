@@ -92,12 +92,15 @@ describe("paid service product setup validation", () => {
   });
 });
 
-describe("default location bootstrap", () => {
+describe("default location and Availability bootstrap", () => {
   beforeEach(() => {
-    state.db.shop = { findUniqueOrThrow: vi.fn().mockResolvedValue({ timezone: "Asia/Kolkata", currency: "INR" }) };
+    state.db.shop = { findUniqueOrThrow: vi.fn().mockResolvedValue({ timezone: "Asia/Kolkata", currency: "INR", domain: "my-salon.myshopify.com", email: "owner@example.com" }) };
     state.db.location.count = vi.fn().mockResolvedValue(0);
     state.db.location.create = vi.fn().mockResolvedValue({ id: "loc", name: "Main location", timezone: "Asia/Kolkata" });
+    state.db.location.findFirst = vi.fn().mockResolvedValue({ id: "loc" });
     state.db.location.findMany = vi.fn().mockResolvedValue([{ id: "loc", name: "Main location", timezone: "Asia/Kolkata" }]);
+    state.db.staffMember.count = vi.fn().mockResolvedValue(0);
+    state.db.staffMember.create = vi.fn().mockResolvedValue({ id: "staff" });
     state.db.staffMember.findMany = vi.fn().mockResolvedValue([]);
     state.db.service.findMany = vi.fn().mockResolvedValue([]);
   });
@@ -110,5 +113,27 @@ describe("default location bootstrap", () => {
     state.db.location.count.mockResolvedValue(1);
     await catalogData(shopId);
     expect(state.db.location.create).not.toHaveBeenCalled();
+  });
+  it("creates one default Availability named after the store, assigned to the new location", async () => {
+    await catalogData(shopId);
+    expect(state.db.staffMember.create).toHaveBeenCalledWith({ data: {
+      firstName: "My Salon", lastName: "", email: "owner@example.com", timezone: "Asia/Kolkata", locationIds: ["loc"], shopId,
+    } });
+  });
+  it("falls back to a placeholder email when the shop has none on file", async () => {
+    state.db.shop.findUniqueOrThrow.mockResolvedValue({ timezone: "Asia/Kolkata", currency: "INR", domain: "my-salon.myshopify.com", email: null });
+    await catalogData(shopId);
+    expect(state.db.staffMember.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ email: "owner@my-salon.myshopify.com" }) }));
+  });
+  it("never creates a second default Availability once one already exists", async () => {
+    state.db.staffMember.count.mockResolvedValue(1);
+    await catalogData(shopId);
+    expect(state.db.staffMember.create).not.toHaveBeenCalled();
+  });
+  it("assigns the default Availability to an existing location when one is already there", async () => {
+    state.db.location.count.mockResolvedValue(1);
+    await catalogData(shopId);
+    expect(state.db.location.create).not.toHaveBeenCalled();
+    expect(state.db.staffMember.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ locationIds: ["loc"] }) }));
   });
 });

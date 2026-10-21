@@ -10,11 +10,24 @@ export const publicStaff = {
   imageUrl: true, bio: true, timezone: true, locationIds: true, active: true,
   _count: { select: { availability: true } },
 } as const;
+function storeDisplayName(domain: string) {
+  return domain.replace(/\.myshopify\.com$/, "").replace(/-/g, " ").replace(/\b\w/g, char => char.toUpperCase());
+}
 export async function catalogData(shopId: string) {
   const db = getShopDatabase(shopId);
-  const shop = await db.shop.findUniqueOrThrow({ where: { id: shopId }, select: { timezone: true, currency: true } });
-  // Most merchants run one location; skip the separate setup step by giving them a default instead of requiring a visit to Locations first.
-  if (await db.location.count() === 0) await db.location.create({ data: { name: "Main location", timezone: shop.timezone, shopId } });
+  const shop = await db.shop.findUniqueOrThrow({ where: { id: shopId }, select: { timezone: true, currency: true, domain: true, email: true } });
+  // Most merchants run one location and one Availability; skip the separate setup steps by giving them defaults instead of requiring manual creation first.
+  let defaultLocationId: string | undefined;
+  if (await db.location.count() === 0) {
+    defaultLocationId = (await db.location.create({ data: { name: "Main location", timezone: shop.timezone, shopId } })).id;
+  }
+  if (await db.staffMember.count() === 0) {
+    const locationId = defaultLocationId ?? (await db.location.findFirst({ select: { id: true } }))!.id;
+    await db.staffMember.create({ data: {
+      firstName: storeDisplayName(shop.domain), lastName: "", email: shop.email || "owner@" + shop.domain,
+      timezone: shop.timezone, locationIds: [locationId], shopId,
+    } });
+  }
   const [locations, staff, services] = await Promise.all([
     db.location.findMany({ orderBy: { name: "asc" }, take: 500 }),
     db.staffMember.findMany({ select: publicStaff, orderBy: { firstName: "asc" }, take: 500 }),
