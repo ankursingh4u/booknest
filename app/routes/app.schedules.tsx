@@ -1,22 +1,16 @@
-import { useState } from "react";
 import { Form, redirect, useActionData, useLoaderData, useNavigate } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { Page, Card, BlockStack, Text, Banner, TextField, Button } from "@shopify/polaris";
+import { Page, Card, BlockStack, Text, Banner } from "@shopify/polaris";
 import { z } from "zod";
 import { DateTime } from "luxon";
 import { requireShop } from "../lib/auth/admin.server";
 import { withShopTransaction } from "../db.server";
 import { catalogData, CatalogError } from "../lib/admin/catalog.server";
-import { ruleSchema, ruleUpdateSchema, blackoutSchema, additionalHoursSchema, formValues } from "../lib/admin/schemas";
+import { blackoutSchema, additionalHoursSchema, formValues } from "../lib/admin/schemas";
 import { formError } from "../lib/admin/errors.server";
 import { AdminField as Field, AdminSelectField as SelectField, AdminEitherSelectField as EitherSelectField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction, AdminTimezoneField } from "../components/AdminFields";
+import { WeeklyHoursTable } from "../components/WeeklyHoursTable";
 import { decideTimeOff, revokeTimeOff } from "../lib/team/time-off.server";
-const dayOrder = [1, 2, 3, 4, 5, 6, 0];
-function TimeField({ name, label, defaultValue }: { name: string; label: string; defaultValue: string }) {
-  const [value, setValue] = useState(defaultValue);
-  return <TextField labelHidden label={label} type="time" name={name} value={value} onChange={setValue} autoComplete="off" />;
-}
-const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 export async function loader({ request }: LoaderFunctionArgs) {
   const { shop, db } = await requireShop(request);
   const [catalog, rules, blackouts, timeOff, additionalHours] = await Promise.all([catalogData(shop.id),
@@ -41,7 +35,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const { db, shop } = await requireShop(request);
   const form = await request.formData();
   try {
-    const intent = z.enum(["additional.save", "additional.delete", "rule.save", "rule.update", "rule.delete", "blackout.save", "blackout.delete", "timeoff.approve", "timeoff.decline", "timeoff.revoke"]).parse(form.get("intent"));
+    const intent = z.enum(["additional.save", "additional.delete", "blackout.save", "blackout.delete", "timeoff.approve", "timeoff.decline", "timeoff.revoke"]).parse(form.get("intent"));
     if (intent === "additional.save") {
       const parsed = additionalHoursSchema.parse(formValues(form));
       if (parsed.endAt <= DateTime.utc().toJSDate()) throw new CatalogError("This opening has already ended. Choose current or future hours.");
@@ -72,63 +66,10 @@ export async function action({ request }: ActionFunctionArgs) {
       }, locks);
     } else if (intent === "timeoff.revoke") await revokeTimeOff(shop.id, z.string().min(1).max(100).parse(form.get("id")));
     else if (intent.startsWith("timeoff.")) await decideTimeOff(shop.id, z.string().min(1).max(100).parse(form.get("id")), intent === "timeoff.approve" ? "APPROVED" : "DECLINED");
-    else if (intent.endsWith("delete")) {
-      const id = z.string().min(1).max(100).parse(form.get("id"));
-      if (intent === "rule.delete") await db.availabilityRule.delete({ where: { id } });
-      else await db.blackout.delete({ where: { id } });
-    } else if (intent === "rule.save") {
-      await db.availabilityRule.create({ data: { ...ruleSchema.parse(formValues(form)), shopId: shop.id } });
-    } else if (intent === "rule.update") {
-      const { id, ...data } = ruleUpdateSchema.parse(formValues(form));
-      await db.availabilityRule.update({ where: { id }, data });
-    }
+    else if (intent === "blackout.delete") await db.blackout.delete({ where: { id: z.string().min(1).max(100).parse(form.get("id")) } });
     else await db.blackout.create({ data: { ...blackoutSchema.parse(formValues(form)), shopId: shop.id } });
     return redirect("/app/schedules" + new URL(request.url).search);
   } catch (error) { return formError(error); }
-}
-function WeeklyHoursTable({ ownerKind, ownerId, timezone, rules }: {
-  ownerKind: "staffId" | "serviceId"; ownerId: string; timezone: string;
-  rules: { id: string; staffId: string | null; serviceId: string | null; weekday: number; startTime: string; endTime: string }[];
-}) {
-  const [zone, setZone] = useState(timezone);
-  const [addingDay, setAddingDay] = useState<number | null>(null);
-  const ownerRules = rules.filter(rule => rule[ownerKind] === ownerId);
-  return <BlockStack gap="400">
-    <AdminTimezoneField name="viewTimezone" label="Timezone for new hours" value={zone} onChangeValue={setZone} required />
-    <div className="bn-week-table">
-      {dayOrder.map(weekday => {
-        const dayRules = ownerRules.filter(rule => rule.weekday === weekday).sort((a, b) => a.startTime.localeCompare(b.startTime));
-        return <div className="bn-week-row" key={weekday}>
-          <div className="bn-week-day">{weekdays[weekday]}</div>
-          <div className="bn-week-slots">
-            {dayRules.map(rule => <Form method="post" className="bn-week-slot" key={rule.id}>
-              <input type="hidden" name="intent" value="rule.update" /><input type="hidden" name="id" value={rule.id} />
-              <div className="bn-week-slot-times">
-                <TimeField name="startTime" label="Start time" defaultValue={rule.startTime} />
-                <Text as="span">–</Text>
-                <TimeField name="endTime" label="End time" defaultValue={rule.endTime} />
-              </div>
-              <Button submit size="slim">Save</Button>
-            </Form>)}
-            {dayRules.length > 0 && addingDay !== weekday && <Button variant="plain" onClick={() => setAddingDay(weekday)}>+ Add another time range</Button>}
-            {dayRules.length === 0 && addingDay !== weekday &&
-              <button type="button" className="bn-week-unavailable" onClick={() => setAddingDay(weekday)}>Unavailable (Click to add timeslot)</button>}
-            {addingDay === weekday && <Form method="post" className="bn-week-slot" onSubmit={() => setAddingDay(null)}>
-              <input type="hidden" name="intent" value="rule.save" /><input type="hidden" name={ownerKind} value={ownerId} />
-              <input type="hidden" name="weekday" value={weekday} /><input type="hidden" name="timezone" value={zone} />
-              <div className="bn-week-slot-times">
-                <TimeField name="startTime" label="Start time" defaultValue="09:00" />
-                <Text as="span">–</Text>
-                <TimeField name="endTime" label="End time" defaultValue="17:00" />
-              </div>
-              <Button submit size="slim" variant="primary">Add</Button>
-              <Button size="slim" onClick={() => setAddingDay(null)}>Cancel</Button>
-            </Form>}
-          </div>
-        </div>;
-      })}
-    </div>
-  </BlockStack>;
 }
 export default function Schedules() {
   const { additionalHours, timeOff, timezone, rules, blackouts, staff, services, locations, ownerStaffId, ownerServiceId } = useLoaderData<typeof loader>();

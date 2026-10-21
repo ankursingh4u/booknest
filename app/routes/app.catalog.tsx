@@ -8,6 +8,7 @@ import { requireShop } from "../lib/auth/admin.server";
 import { catalogData, catalogKind, mutateCatalog } from "../lib/admin/catalog.server";
 import { formError } from "../lib/admin/errors.server";
 import { AdminField as Field, AdminSelectField as SelectField, AdminMultiField as MultiField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction, AdminChoiceCard, AdminTimezoneField } from "../components/AdminFields";
+import { WeeklyHoursTable } from "../components/WeeklyHoursTable";
 import { verifyBookingVariant } from "../lib/shopify/variant.server";
 import { createBookingProduct } from "../lib/shopify/product-setup.server";
 const titles = { locations: "Locations", availabilities: "Availabilities", services: "Events/Services" };
@@ -19,8 +20,10 @@ const subtitles = {
 type Row = { id: string; title: string; summary: string; active: boolean; values: Record<string, string>; selected: string[] };
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const kind = catalogKind.parse(params.kind);
-  const { shop } = await requireShop(request);
+  const { shop, db } = await requireShop(request);
   const result = await catalogData(shop.id);
+  const rules = kind === "availabilities" ? await db.availabilityRule.findMany({ where: { staffId: { not: null } },
+    select: { id: true, staffId: true, serviceId: true, weekday: true, startTime: true, endTime: true } }) : [];
   const stringify = (record: Record<string, unknown>) => Object.fromEntries(Object.entries(record).map(([key, value]) => [key, value == null ? "" : String(value)]));
   let rows: Row[];
   if (kind === "locations") rows = result.locations.map(item => ({ id: item.id, title: item.name, summary: item.timezone, active: item.active, values: stringify(item), selected: [] }));
@@ -29,7 +32,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   else rows = result.services.map(item => ({ id: item.id, title: item.title, summary: item.durationMin + " min · " + item.capacity + " seat(s)", active: item.active,
     values: stringify({ ...item, price: (item.priceCents / 100).toFixed(2), depositValue: item.depositType === "PERCENT" ? item.depositValue : (item.depositValue / 100).toFixed(2) }),
     selected: item.staff.map(assignment => assignment.staffId) }));
-  return { kind, title: titles[kind], rows, creationKey: crypto.randomUUID(), timezone: result.shop.timezone, currency: result.shop.currency,
+  return { kind, title: titles[kind], rows, creationKey: crypto.randomUUID(), timezone: result.shop.timezone, currency: result.shop.currency, rules,
     locations: result.locations.filter(item => item.active).map(item => ({ value: item.id, label: item.name })),
     staff: result.staff.filter(item => item.active).map(item => ({ value: item.id, label: item.firstName + " " + item.lastName })),
   };
@@ -48,7 +51,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   }
 }
 export default function Catalog() {
-  const { kind, title, rows, locations, staff, timezone, currency, creationKey } = useLoaderData<typeof loader>();
+  const { kind, title, rows, locations, staff, timezone, currency, creationKey, rules } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>();
   const [search] = useSearchParams();
   const navigate = useNavigate();
@@ -107,7 +110,11 @@ export default function Catalog() {
           {field("contactLink", "Contact Link", "url", "", false, "Your meeting or video call link.")}
           {field("imageUrl", "Profile image URL", "url")}{field("bio", "Description", "textarea")}
         </BlockStack></details>
-        <Link to="/app/schedules">Manage working hours and time off</Link>
+        {edit ? <>
+          <Text as="h3" variant="headingSm">Weekly hours</Text>
+          <WeeklyHoursTable ownerKind="staffId" ownerId={edit.id} timezone={timezone} rules={rules} />
+          <Link to={"/app/schedules?staffId=" + edit.id}>Add time off or one-off extra hours</Link>
+        </> : <p className="bn-muted">Save this Availability first, then set their weekly hours here.</p>}
       </>}
       {kind === "services" && edit && <>
         {field("title", "Event/Service name", "text", "", true)}{field("slug", "URL name", "text", "", true, "Lowercase words separated by hyphens.")}
