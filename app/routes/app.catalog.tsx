@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useAppBridge } from "@shopify/app-bridge-react";
-import { data, Form, Link, redirect, useActionData, useLoaderData, useLocation, useNavigate, useSearchParams } from "react-router";
+import { data, Form, Link, redirect, useActionData, useFetcher, useLoaderData, useLocation, useNavigate, useSearchParams } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Page, Card, BlockStack, Text, Badge, Banner, RadioButton, TextField, Button, Tabs, EmptyState, Modal } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
@@ -65,6 +65,8 @@ export default function Catalog() {
   const visible = rows.filter(row => (tab === "active" ? row.active : !row.active)
     && (query === "" || row.title.toLowerCase().includes(query.toLowerCase()) || row.summary.toLowerCase().includes(query.toLowerCase())));
   const close = () => navigate(location.pathname);
+  const themeLink = useFetcher<{ url: string }>();
+  useEffect(() => { if (themeLink.data?.url) window.open(themeLink.data.url, "_top"); }, [themeLink.data]);
   return <Page title={title} subtitle={subtitles[kind]}><BlockStack gap="400">
     {search.has("saved") && !result && <Banner tone="success">Changes saved.</Banner>}
     {result && !creatingService && <Banner tone="critical"><p>{result.error}</p>{Object.entries(result.fields).map(([name, errors]) => errors?.map(error => <p key={name + error}>{name}: {error}</p>))}</Banner>}
@@ -110,6 +112,13 @@ export default function Catalog() {
         <MultiField name="staffIds" label="Availabilities" required selected={submitted?.staffIds ?? edit?.selected ?? []} options={staff} />
         <div className="bn-form-grid">{field("durationMin", "Duration (minutes)", "number", "60", true)}{field("capacity", "Seats per time", "number", "1", true)}</div>
         <ProductSetup initialVariant={value.variantId ?? ""} initialPrice={value.price ?? "0.00"} creationKey={submitted?.creationKey || creationKey} initialMode={value.productMode === "new" ? "new" : "existing"} currency={currency} errors={result?.fields} />
+        {value.variantId && <div className="bn-field">
+          <Button loading={themeLink.state !== "idle"} disabled={themeLink.state !== "idle"}
+            onClick={() => themeLink.load("/app/catalog/theme-link?variantId=" + encodeURIComponent(value.variantId!))}>
+            Add booking widget to theme
+          </Button>
+          <small>Opens the theme editor directly on this Event/Service's product page, with the booking block ready to add.</small>
+        </div>}
         <details><summary>Advanced settings (optional)</summary><BlockStack gap="400">
           {field("slotIntervalMin", "Slot interval (minutes)", "number", "", false, "Leave blank to offer starts at the Event/Service duration.")}
           <div className="bn-form-grid">{field("bufferBefore", "Buffer before (minutes)", "number", "0")}{field("bufferAfter", "Buffer after (minutes)", "number", "0")}</div>

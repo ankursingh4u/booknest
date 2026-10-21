@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { verifyBookingVariant } from "./variant.server";
+import { verifyBookingVariant, productHandleForVariant } from "./variant.server";
 const gid = "gid://shopify/ProductVariant/123";
 const publicationId = "gid://shopify/Publication/11";
 const publications = { data: { publications: { nodes: [{ id: publicationId, channels: { nodes: [{ handle: "online_store" }] } }], pageInfo: { hasNextPage: false, endCursor: null } } } };
@@ -28,5 +28,17 @@ describe("booking product validation", () => {
   it("fails closed on malformed Shopify responses", async () => {
     const admin = { graphql: vi.fn().mockResolvedValue(Response.json({ errors: [{ message: "unavailable" }] })) };
     await expect(verifyBookingVariant(admin, gid, 2999)).rejects.toThrow();
+  });
+});
+
+describe("productHandleForVariant", () => {
+  const handleAdmin = (payload: unknown) => ({ graphql: vi.fn().mockResolvedValue(Response.json(payload)) });
+  it("returns the linked product's handle", async () => {
+    const admin = handleAdmin({ data: { productVariant: { product: { handle: "grooming-session" } } } });
+    await expect(productHandleForVariant(admin, gid)).resolves.toBe("grooming-session");
+  });
+  it("returns null when the variant has no linked product or the response is malformed", async () => {
+    await expect(productHandleForVariant(handleAdmin({ data: { productVariant: null } }), gid)).resolves.toBeNull();
+    await expect(productHandleForVariant(handleAdmin({ errors: [{ message: "unavailable" }] }), gid)).resolves.toBeNull();
   });
 });

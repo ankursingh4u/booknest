@@ -19,3 +19,12 @@ export async function verifyBookingVariant(admin: AdminGraphql, variantId: strin
   const cents = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
   if (!Number.isSafeInteger(cents) || cents !== expectedCents) throw new BookingError("The Shopify product price and Event/Service price differ. Update the Event/Service before booking.", 409);
 }
+const handlePayload = z.object({ data: z.object({ productVariant: z.object({ product: z.object({ handle: z.string() }) }).nullable() }) });
+export async function productHandleForVariant(admin: AdminGraphql, variantId: string): Promise<string | null> {
+  const response = await admin.graphql("query BookNestProductHandle($id: ID!) { productVariant(id: $id) { product { handle } } }", { variables: { id: variantId } });
+  const raw: unknown = await response.json();
+  const parsed = handlePayload.safeParse(raw);
+  const errors = raw && typeof raw === "object" && "errors" in raw ? (raw as { errors?: unknown }).errors : undefined;
+  if (!response.ok || !parsed.success || (Array.isArray(errors) && errors.length) || !parsed.data.data.productVariant) return null;
+  return parsed.data.data.productVariant.product.handle;
+}

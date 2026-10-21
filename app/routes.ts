@@ -17,6 +17,7 @@ export default [
     { index: true, file: "routes/app._index.tsx" },
     { path: "setup", file: "routes/app.setup.tsx" },
     { path: "manage/:kind", file: "routes/app.catalog.tsx" },
+    { path: "catalog/theme-link", file: "routes/app.catalog.theme-link.ts" },
     { path: "bookings.csv", file: "routes/app.bookings-export.ts" },
     { path: "schedules", file: "routes/app.schedules.tsx" },
     { id: "booking-new", path: "bookings/new", file: "routes/app.booking-form.tsx" },
