@@ -58,8 +58,11 @@ describe("customer booking policy inputs", () => {
     expect(serviceSchema.parse(service)).toMatchObject({ slotIntervalMin: null, customerCancelCutoffHours: 0, customerRescheduleCutoffHours: 0 });
     expect(serviceSchema.parse({ ...service, slotIntervalMin: "" }).slotIntervalMin).toBeNull();
   });
+  it("treats a 0 slot interval the same as blank, since it usually comes from clicking the empty field's spinner arrows", () => {
+    expect(serviceSchema.parse({ ...service, slotIntervalMin: "0" }).slotIntervalMin).toBeNull();
+  });
   it("rejects fractional or excessive scheduling policy values", () => {
-    for (const interval of ["0", "0.5", "1441"]) expect(serviceSchema.safeParse({ ...service, slotIntervalMin: interval }).success).toBe(false);
+    for (const interval of ["0.5", "1441"]) expect(serviceSchema.safeParse({ ...service, slotIntervalMin: interval }).success).toBe(false);
     for (const cutoff of ["-1", "0.5", "8761"]) {
       expect(serviceSchema.safeParse({ ...service, customerCancelCutoffHours: cutoff }).success).toBe(false);
       expect(serviceSchema.safeParse({ ...service, customerRescheduleCutoffHours: cutoff }).success).toBe(false);

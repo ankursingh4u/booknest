@@ -27,7 +27,8 @@ export const serviceSchema = z.object({
   title: text(160).min(1),
   slug: z.preprocess(value => value === "" || value == null ? undefined : value, z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100).optional()),
   description: optionalText(5000), locationId: id, staffIds: z.array(id).min(1).max(50).transform(ids => [...new Set(ids)]),
-  slotIntervalMin: z.preprocess(value => value === "" || value == null ? null : value, int(1, 1440).nullable()).default(null),
+  // "0" happens when a merchant clicks the empty field's spinner arrows rather than typing a value; treat it the same as blank.
+  slotIntervalMin: z.preprocess(value => value === "" || value == null || value === "0" ? null : value, int(1, 1440).nullable()).default(null),
   customerCancelCutoffHours: int(0, 8760).default(0), customerRescheduleCutoffHours: int(0, 8760).default(0),
   durationMin: int(5, 1440), capacity: int(1, 1000), bufferBefore: int(0, 1440).default(0), bufferAfter: int(0, 1440).default(0),
   price: money, depositType: z.enum(["NONE", "FULL", "FIXED", "PERCENT"]).default("NONE"),
