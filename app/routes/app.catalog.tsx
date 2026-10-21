@@ -112,7 +112,7 @@ export default function Catalog() {
         </BlockStack></details>
         {edit ? <>
           <Text as="h3" variant="headingSm">Weekly hours</Text>
-          <WeeklyHoursTable ownerKind="staffId" ownerId={edit.id} timezone={timezone} rules={rules} />
+          <WeeklyHoursTable ownerKind="staffId" ownerId={edit.id} timezone={edit.values.timezone || timezone} rules={rules} />
           <Link to={"/app/schedules?staffId=" + edit.id}>Add time off or one-off extra hours</Link>
         </> : <p className="bn-muted">Save this Availability first, then set their weekly hours here.</p>}
       </>}

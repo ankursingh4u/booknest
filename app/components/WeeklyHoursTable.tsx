@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useFetcher } from "react-router";
 import { Text, TextField, Button, BlockStack } from "@shopify/polaris";
-import { AdminTimezoneField } from "./AdminFields";
 
 const dayOrder = [1, 2, 3, 4, 5, 6, 0];
 const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -58,11 +57,9 @@ function NewSlotRow({ ownerKind, ownerId, weekday, timezone, onDone }: {
 export function WeeklyHoursTable({ ownerKind, ownerId, timezone, rules }: {
   ownerKind: "staffId" | "serviceId"; ownerId: string; timezone: string; rules: Rule[];
 }) {
-  const [zone, setZone] = useState(timezone);
   const [addingDay, setAddingDay] = useState<number | null>(null);
   const ownerRules = rules.filter(rule => rule[ownerKind] === ownerId);
   return <BlockStack gap="400">
-    <AdminTimezoneField name="viewTimezone" label="Timezone for new hours" value={zone} onChangeValue={setZone} required />
     <div className="bn-week-table">
       {dayOrder.map(weekday => {
         const dayRules = ownerRules.filter(rule => rule.weekday === weekday).sort((a, b) => a.startTime.localeCompare(b.startTime));
@@ -73,7 +70,7 @@ export function WeeklyHoursTable({ ownerKind, ownerId, timezone, rules }: {
             {dayRules.length > 0 && addingDay !== weekday && <Button variant="plain" onClick={() => setAddingDay(weekday)}>+ Add another time range</Button>}
             {dayRules.length === 0 && addingDay !== weekday &&
               <button type="button" className="bn-week-unavailable" onClick={() => setAddingDay(weekday)}>Unavailable (Click to add timeslot)</button>}
-            {addingDay === weekday && <NewSlotRow ownerKind={ownerKind} ownerId={ownerId} weekday={weekday} timezone={zone} onDone={() => setAddingDay(null)} />}
+            {addingDay === weekday && <NewSlotRow ownerKind={ownerKind} ownerId={ownerId} weekday={weekday} timezone={timezone} onDone={() => setAddingDay(null)} />}
           </div>
         </div>;
       })}

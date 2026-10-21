@@ -102,6 +102,7 @@ describe("default location and Availability bootstrap", () => {
     state.db.staffMember.count = vi.fn().mockResolvedValue(0);
     state.db.staffMember.create = vi.fn().mockResolvedValue({ id: "staff" });
     state.db.staffMember.findMany = vi.fn().mockResolvedValue([]);
+    state.db.availabilityRule = { createMany: vi.fn().mockResolvedValue({ count: 5 }) };
     state.db.service.findMany = vi.fn().mockResolvedValue([]);
   });
   it("creates one default location in the shop's own timezone when none exist", async () => {
@@ -129,6 +130,13 @@ describe("default location and Availability bootstrap", () => {
     state.db.staffMember.count.mockResolvedValue(1);
     await catalogData(shopId);
     expect(state.db.staffMember.create).not.toHaveBeenCalled();
+    expect(state.db.availabilityRule.createMany).not.toHaveBeenCalled();
+  });
+  it("seeds Monday-Friday 9-5 hours for the new default Availability", async () => {
+    await catalogData(shopId);
+    expect(state.db.availabilityRule.createMany).toHaveBeenCalledWith({ data: [1, 2, 3, 4, 5].map(weekday => ({
+      staffId: "staff", weekday, startTime: "09:00", endTime: "17:00", timezone: "Asia/Kolkata", shopId,
+    })) });
   });
   it("assigns the default Availability to an existing location when one is already there", async () => {
     state.db.location.count.mockResolvedValue(1);

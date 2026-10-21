@@ -23,10 +23,14 @@ export async function catalogData(shopId: string) {
   }
   if (await db.staffMember.count() === 0) {
     const locationId = defaultLocationId ?? (await db.location.findFirst({ select: { id: true } }))!.id;
-    await db.staffMember.create({ data: {
+    const created = await db.staffMember.create({ data: {
       firstName: storeDisplayName(shop.domain), lastName: "", email: shop.email || "owner@" + shop.domain,
       timezone: shop.timezone, locationIds: [locationId], shopId,
     } });
+    // Monday-Friday, 9-5, matches the reference app's own default for a brand-new Availability.
+    await db.availabilityRule.createMany({ data: [1, 2, 3, 4, 5].map(weekday => ({
+      staffId: created.id, weekday, startTime: "09:00", endTime: "17:00", timezone: shop.timezone, shopId,
+    })) });
   }
   const [locations, staff, services] = await Promise.all([
     db.location.findMany({ orderBy: { name: "asc" }, take: 500 }),
