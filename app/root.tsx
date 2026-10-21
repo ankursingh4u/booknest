@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import type { LinksFunction } from "react-router";
 import { Links, Meta, Outlet, Scripts, ScrollRestoration, useNavigation, useRouteError, isRouteErrorResponse } from "react-router";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
@@ -10,6 +11,12 @@ export const links: LinksFunction = () => [
 
 export default function Root() {
   const navigation = useNavigation();
+  // A tab left open across a deploy references JS chunks a later build removed; self-heal with one reload instead of leaving a blank page.
+  useEffect(() => {
+    const reload = () => window.location.reload();
+    window.addEventListener("vite:preloadError", reload);
+    return () => window.removeEventListener("vite:preloadError", reload);
+  }, []);
   return <html lang="en"><head>
     <meta charSet="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
