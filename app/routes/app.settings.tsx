@@ -47,6 +47,8 @@ export default function Settings() {
       <p>Less-frequent setup and configuration pages.</p>
       <div className="bn-heading-row">
         <Link to="/app/setup">Setup guide</Link>
+        <Link to="/app/manage/locations">Locations</Link>
+        <Link to="/app/schedules">Schedules</Link>
         <Link to="/app/intake">Intake Questions</Link>
         <Link to="/app/calendar">Google Calendar</Link>
         <Link to="/app/support">Support</Link>

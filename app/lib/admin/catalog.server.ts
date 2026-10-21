@@ -12,11 +12,13 @@ export const publicStaff = {
 } as const;
 export async function catalogData(shopId: string) {
   const db = getShopDatabase(shopId);
-  const [locations, staff, services, shop] = await Promise.all([
+  const shop = await db.shop.findUniqueOrThrow({ where: { id: shopId }, select: { timezone: true, currency: true } });
+  // Most merchants run one location; skip the separate setup step by giving them a default instead of requiring a visit to Locations first.
+  if (await db.location.count() === 0) await db.location.create({ data: { name: "Main location", timezone: shop.timezone, shopId } });
+  const [locations, staff, services] = await Promise.all([
     db.location.findMany({ orderBy: { name: "asc" }, take: 500 }),
     db.staffMember.findMany({ select: publicStaff, orderBy: { firstName: "asc" }, take: 500 }),
     db.service.findMany({ include: { staff: { select: { staffId: true } } }, orderBy: { title: "asc" }, take: 500 }),
-    db.shop.findUniqueOrThrow({ where: { id: shopId }, select: { timezone: true, currency: true } }),
   ]);
   return { locations, staff, services, shop };
 }

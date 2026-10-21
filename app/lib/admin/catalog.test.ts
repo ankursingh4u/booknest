@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mutateCatalog } from "./catalog.server";
+import { mutateCatalog, catalogData } from "./catalog.server";
 import { newServiceIdentity } from "../shopify/product-setup.server";
 import { serviceSchema } from "./schemas";
 const state = vi.hoisted(() => ({ db: {} as Record<string, any>, locks: [] as string[] }));
@@ -89,5 +89,26 @@ describe("paid service product setup validation", () => {
     const verify = vi.fn(), createProduct = vi.fn();
     await expect(mutateCatalog(shopId, "services", form({ price: "0.00" }), verify, createProduct)).resolves.toMatchObject({ priceCents: 0, variantId: null });
     expect(createProduct).not.toHaveBeenCalled(); expect(verify).not.toHaveBeenCalled();
+  });
+});
+
+describe("default location bootstrap", () => {
+  beforeEach(() => {
+    state.db.shop = { findUniqueOrThrow: vi.fn().mockResolvedValue({ timezone: "Asia/Kolkata", currency: "INR" }) };
+    state.db.location.count = vi.fn().mockResolvedValue(0);
+    state.db.location.create = vi.fn().mockResolvedValue({ id: "loc", name: "Main location", timezone: "Asia/Kolkata" });
+    state.db.location.findMany = vi.fn().mockResolvedValue([{ id: "loc", name: "Main location", timezone: "Asia/Kolkata" }]);
+    state.db.staffMember.findMany = vi.fn().mockResolvedValue([]);
+    state.db.service.findMany = vi.fn().mockResolvedValue([]);
+  });
+  it("creates one default location in the shop's own timezone when none exist", async () => {
+    const result = await catalogData(shopId);
+    expect(state.db.location.create).toHaveBeenCalledWith({ data: { name: "Main location", timezone: "Asia/Kolkata", shopId } });
+    expect(result.locations).toHaveLength(1);
+  });
+  it("never creates a second location once one already exists", async () => {
+    state.db.location.count.mockResolvedValue(1);
+    await catalogData(shopId);
+    expect(state.db.location.create).not.toHaveBeenCalled();
   });
 });

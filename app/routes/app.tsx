@@ -20,8 +20,6 @@ export default function App() {
         <Link to="/app" rel="home">Bookings</Link>
         <Link to="/app/manage/services">Events/Services</Link>
         <Link to="/app/manage/availabilities">Availabilities</Link>
-        <Link to="/app/manage/locations">Locations</Link>
-        <Link to="/app/schedules">Schedules</Link>
         <Link to="/app/insights">Insights</Link>
         <Link to="/app/team">Team Portal</Link>
         <Link to="/app/billing">Account and plan</Link>
