@@ -108,7 +108,14 @@
       history.delete(button);
     }
   }
-  const core = { activeVariant, variantGate, variantResolver, monthDates, shiftMonth, shiftDay, weekday, calendarKeyDate, claimNativeForm, isHoldActive, accentPresentation, parseThemeColor, setNativeVisibility, request };
+  function nativeReplacementActive(actions) {
+    for (const action of actions) if (!action.hidden) return true;
+    return false;
+  }
+  function placeNativeAction(nativeForm, action, anchor) {
+    if (anchor) anchor.before(action); else nativeForm.append(action);
+  }
+  const core = { activeVariant, variantGate, variantResolver, monthDates, shiftMonth, shiftDay, weekday, calendarKeyDate, claimNativeForm, isHoldActive, accentPresentation, parseThemeColor, setNativeVisibility, nativeReplacementActive, placeNativeAction, request };
   if (typeof document === "undefined" && typeof module !== "undefined" && module.exports) { module.exports = core; return; }
   if (window.__booknestLoaded) return;
   window.__booknestLoaded = true;
@@ -298,10 +305,14 @@
           });
           // Inline properties keep this theme-form control scoped without affecting the merchant theme.
           action.style.cssText = "min-height:44px;width:100%;padding:12px 16px;border:2px solid " + (root.style.getPropertyValue("--bn-accent") || "#253f8e") + ";border-radius:6px;background:" + (root.style.getPropertyValue("--bn-accent") || "#253f8e") + ";color:" + accent.foreground + ";font:inherit;cursor:pointer";
-          nativeForm.append(action); nativeActions.set(nativeForm, action);
+          // Take the buy button's own position in the form rather than appending at the end.
+          placeNativeAction(nativeForm, action, nativeForm.querySelector('button[type="submit"], input[type="submit"], [name="add"]'));
+          nativeActions.set(nativeForm, action);
         }
         action.hidden = pending; action.style.setProperty("display", pending ? "none" : "block", "important");
       }
+      // While the native form carries the booking button, the block's own chrome at its placed position is redundant.
+      root.classList.toggle("bn-replacing", nativeReplacementActive(nativeActions.values()));
     }
     function forgetCheckoutHold() {
       checkoutHold = null; checkoutFailed = false; clearTimeout(expiryTimer);
@@ -539,7 +550,8 @@
         for (const option of data.services) service.append(make("option", option.title, { value: option.id }));
         if (!data.services.length) {
           form.hidden = true; trigger.hidden = true; showcase.replaceChildren();
-          status.textContent = "No booking options are available for this product.";
+          // Shoppers on an unlinked product should see nothing; only the theme editor explains the empty block.
+          status.textContent = window.Shopify && window.Shopify.designMode ? "No booking options are available for this product." : "";
           return data;
         }
         heading.after(status, errors, retry);

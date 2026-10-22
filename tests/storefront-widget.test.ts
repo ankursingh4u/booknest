@@ -70,6 +70,21 @@ describe("storefront booking safeguards", () => {
     expect(helpers.claimNativeForm(form, secondRoot, owners, vi.fn())).toBe(true);
     expect(release).toHaveBeenCalledWith(form);
   });
+  it("reports replacement active only while an injected booking button is visible", () => {
+    const helpers = core();
+    expect(helpers.nativeReplacementActive([])).toBe(false);
+    expect(helpers.nativeReplacementActive([{ hidden: true }])).toBe(false);
+    expect(helpers.nativeReplacementActive([{ hidden: true }, { hidden: false }])).toBe(true);
+  });
+  it("places the booking trigger at the buy button's position when one exists", () => {
+    const helpers = core();
+    const before = vi.fn(), append = vi.fn(), action = {};
+    helpers.placeNativeAction({ append }, action, { before });
+    expect(before).toHaveBeenCalledWith(action);
+    expect(append).not.toHaveBeenCalled();
+    helpers.placeNativeAction({ append }, action, null);
+    expect(append).toHaveBeenCalledWith(action);
+  });
   it("keeps checkout locked until the exact server hold expiry", () => {
     const helpers = core();
     const hold = { expiresAt: "2026-11-01T10:15:00Z" };

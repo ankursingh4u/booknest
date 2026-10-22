@@ -1,5 +1,6 @@
 [id^="bn-booking-root-"] { --bn-accent:#253f8e; --bn-on-accent:#fff; --bn-focus:#253f8e; --bn-bg:#fff; --bn-text:#202223; --bn-border:#c9cccf; --bn-space:16px; font:inherit; color:var(--bn-text); isolation:isolate; }
 [id^="bn-booking-root-"] [hidden] { display:none!important; }
+[id^="bn-booking-root-"].bn-replacing > .bn-trigger, [id^="bn-booking-root-"].bn-replacing > .bn-status, [id^="bn-booking-root-"].bn-replacing > .bn-error, [id^="bn-booking-root-"].bn-replacing > .bn-secondary { display:none!important; }
 [id^="bn-booking-root-"][data-theme="contrast"] { --bn-bg:#17191c; --bn-text:#fff; --bn-border:#767b83; }
 [id^="bn-booking-root-"] *, [id^="bn-booking-root-"] *::before, [id^="bn-booking-root-"] *::after { box-sizing:border-box; }
 [id^="bn-booking-root-"] .bn-widget { width:calc(100% - 32px); max-width:880px; padding:24px; background:var(--bn-bg); color:var(--bn-text); border:1px solid var(--bn-border); border-radius:16px; max-height:88vh; overflow:auto; overscroll-behavior:contain; }
