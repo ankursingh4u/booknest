@@ -1,4 +1,4 @@
-import type { LinksFunction } from "react-router";
+import type { HeadersFunction, LinksFunction } from "react-router";
 import { Links, Meta, Outlet, Scripts, ScrollRestoration, useNavigation, useRouteError, isRouteErrorResponse } from "react-router";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import styles from "./styles/app.css?url";
@@ -7,6 +7,12 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: polarisStyles },
   { rel: "stylesheet", href: styles },
 ];
+
+// entry.server.tsx's no-store only covers the initial HTML document - every client-side
+// navigation and fetcher call goes through a .data request that bypasses that handler
+// entirely, so it had no Cache-Control at all and could be served stale from the browser's
+// own cache. This runs for every route response (document or .data), fixing both.
+export const headers: HeadersFunction = () => ({ "Cache-Control": "no-store" });
 
 export default function Root() {
   const navigation = useNavigation();
