@@ -236,6 +236,8 @@ function ProductSetup({ initialVariant, initialPrice, creationKey, initialMode, 
   const [label, setLabel] = useState("");
   const [choosing, setChoosing] = useState(false);
   const [pickerError, setPickerError] = useState("");
+  // Already linked to a product: keep the picker collapsed so editing an unrelated field can't accidentally relink it.
+  const [locked, setLocked] = useState(Boolean(initialVariant) && !errors?.variantId?.length);
   async function chooseVariant() {
     setPickerError(""); setChoosing(true);
     try {
@@ -256,21 +258,27 @@ function ProductSetup({ initialVariant, initialPrice, creationKey, initialMode, 
     <input type="hidden" name="creationKey" value={key} />
     <TextField label={"Price (" + currency + ")"} id="price" name="price" inputMode="decimal" value={price} onChange={setPrice}
       requiredIndicator error={errors?.price?.[0]} autoComplete="off" />
-    <fieldset className="bn-options"><legend>Shopify product for paid bookings</legend>
-      <RadioButton name="productMode" value="existing" label="Choose an existing product" checked={mode === "existing"} onChange={() => setMode("existing")} />
-      <RadioButton name="productMode" value="new" label="Create a new booking product" checked={mode === "new"} onChange={() => setMode("new")} />
-    </fieldset>
-    {mode === "existing" ? <div className="bn-field">
-      <input type="hidden" name="variantId" value={variantId} />
-      <p>{label || (variantId ? "A Shopify product variant is linked." : "Choose the product variant customers will purchase.")}</p>
-      <Button onClick={chooseVariant} loading={choosing} disabled={choosing}>{choosing ? "Opening Shopify…" : variantId ? "Change Shopify product" : "Choose Shopify product"}</Button>
-      {pickerError && <p className="bn-error" role="alert">{pickerError}</p>}
-      <small>The picker fills the product price. BookNest verifies the active variant and price when you save. Free bookings do not require a product.</small>
-      <details><summary>Enter a variant ID manually</summary>
-        <TextField label="Shopify product variant ID" id="manualVariantId" value={variantId}
-          onChange={value => { setVariantId(value); setLabel(""); }} error={Boolean(errors?.variantId?.length)} placeholder="Numeric ID or Shopify GID" autoComplete="off" />
-      </details>
-    </div> : <p>Saving a paid Event/Service creates one Shopify product at this price and publishes it to your Online Store. The booking product does not require shipping. Retrying this form reuses the same product.</p>}
+    {locked ? <div className="bn-field">
+      <input type="hidden" name="productMode" value={mode} /><input type="hidden" name="variantId" value={variantId} />
+      <p>✓ Already linked to a Shopify product.</p>
+      <Button onClick={() => setLocked(false)}>Change linked product</Button>
+    </div> : <>
+      <fieldset className="bn-options"><legend>Shopify product for paid bookings</legend>
+        <RadioButton name="productMode" value="existing" label="Choose an existing product" checked={mode === "existing"} onChange={() => setMode("existing")} />
+        <RadioButton name="productMode" value="new" label="Create a new booking product" checked={mode === "new"} onChange={() => setMode("new")} />
+      </fieldset>
+      {mode === "existing" ? <div className="bn-field">
+        <input type="hidden" name="variantId" value={variantId} />
+        <p>{label || (variantId ? "A Shopify product variant is linked." : "Choose the product variant customers will purchase.")}</p>
+        <Button onClick={chooseVariant} loading={choosing} disabled={choosing}>{choosing ? "Opening Shopify…" : variantId ? "Change Shopify product" : "Choose Shopify product"}</Button>
+        {pickerError && <p className="bn-error" role="alert">{pickerError}</p>}
+        <small>The picker fills the product price. BookNest verifies the active variant and price when you save. Free bookings do not require a product.</small>
+        <details><summary>Enter a variant ID manually</summary>
+          <TextField label="Shopify product variant ID" id="manualVariantId" value={variantId}
+            onChange={value => { setVariantId(value); setLabel(""); }} error={Boolean(errors?.variantId?.length)} placeholder="Numeric ID or Shopify GID" autoComplete="off" />
+        </details>
+      </div> : <p>Saving a paid Event/Service creates one Shopify product at this price and publishes it to your Online Store. The booking product does not require shipping. Retrying this form reuses the same product.</p>}
+    </>}
   </>;
 }
 
