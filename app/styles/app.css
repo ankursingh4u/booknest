@@ -11,6 +11,7 @@
   color: var(--p-color-text-link, #2c6ecb); text-decoration: none; font-weight: 500;
 }
 #booknest-admin a:not(.bn-primary-link):not(.bn-calendar-booking):hover { text-decoration: underline; }
+#booknest-admin .bn-record-title { font-size: 16px; font-weight: 600; text-decoration: underline; cursor: pointer; }
 #booknest-admin h1 { font-size: 28px; font-weight: 700; line-height: 1.2; margin: 0 0 var(--bn-space-4); }
 #booknest-admin h2 { font-size: 20px; font-weight: 700; line-height: 1.3; margin: 0 0 var(--bn-space-3); }
 #booknest-admin a:focus-visible, #booknest-admin button:focus-visible,
