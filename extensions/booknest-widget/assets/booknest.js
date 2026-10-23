@@ -236,7 +236,10 @@
     const waitlistSubmit = make("button", "Notify me", { type: "button", class: "bn-secondary" });
     const waitlistForm = make("div", null, { class: "bn-waitlist", hidden: true });
     waitlistForm.append(waitlistEmail, waitlistSubmit);
-    waitlistButton.addEventListener("click", () => { waitlistButton.hidden = true; waitlistForm.hidden = false; waitlistEmail.focus(); });
+    // Keep the required waitlist email out of the booking form's validation while it is hidden -
+    // a hidden required field is unfocusable and silently blocks the "Add to cart" submit.
+    waitlistEmail.disabled = true;
+    waitlistButton.addEventListener("click", () => { waitlistButton.hidden = true; waitlistForm.hidden = false; waitlistEmail.disabled = false; waitlistEmail.focus(); });
     waitlistSubmit.addEventListener("click", async () => {
       if (!waitlistEmail.checkValidity() || !chosen || !selectedDate) { waitlistEmail.reportValidity(); return; }
       waitlistSubmit.disabled = true;
@@ -373,7 +376,7 @@
     async function loadSlots() {
       const generation = ++slotVersion;
       selected = null; visibleSlots = []; idempotencyKey = crypto.randomUUID(); updateButton(); drawSlots(); clearError();
-      waitlistButton.hidden = true; waitlistForm.hidden = true; waitlistSubmit.disabled = false; waitlistEmail.value = "";
+      waitlistButton.hidden = true; waitlistForm.hidden = true; waitlistEmail.disabled = true; waitlistSubmit.disabled = false; waitlistEmail.value = "";
       if (!chosen || !selectedDate || !quantity.checkValidity()) return;
       status.textContent = "Finding available times…";
       try {
