@@ -35,7 +35,7 @@ export default function Terms() {
           <li>We limit the data we collect to what's needed: name, email, and phone. We don't collect billing or shipping addresses.</li>
           <li>We automatically process Shopify's standard customer data request, customer redaction, and shop redaction webhooks.</li>
           <li>We anonymize a customer's personal data 24 months after their appointment date (see <a href="/privacy">Privacy Policy</a>).</li>
-          <li>We log administrative access to records containing personal data.</li>
+          <li>We log administrative access to records containing personal data, and follow a documented <a href="https://github.com/ankursingh4u/booknest/blob/master/docs/data-loss-prevention.md">data loss prevention strategy</a> covering access control, encryption, backups, and retention.</li>
           <li>If we become aware of a security incident affecting your customers' data, we will notify you within 72 hours, per our <a href="https://github.com/ankursingh4u/booknest/blob/master/docs/security-incident-response.md">incident response policy</a>.</li>
         </ul>
 
