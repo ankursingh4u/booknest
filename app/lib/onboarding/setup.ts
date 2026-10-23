@@ -11,9 +11,3 @@ export function setupSteps(progress: SetupProgress): SetupStep[] {
       text: "Set duration, capacity, and price, and choose who can be booked. We start you with a location and an Availability (Mon–Fri, 9–5) you can adjust anytime.", url: "/app/manage/services" },
   ];
 }
-
-export function setupError(progress: SetupProgress & { tested: boolean }): string | null {
-  if (!progress.email || progress.services < 1) return "Add your reply email and create an Event/Service first.";
-  if (!progress.tested) return "Test a storefront booking before marking setup complete.";
-  return null;
-}
