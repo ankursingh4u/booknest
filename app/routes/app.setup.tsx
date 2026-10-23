@@ -27,5 +27,10 @@ export default function Setup() {
       <div><Button variant="primary" url={"https://" + domain + "/admin/themes/current/editor"} target="_blank">Open theme editor</Button></div>
       <p>Create a test booking on your storefront, check it appears in BookNest, and verify the confirmation email. For paid bookings, use your development store's test checkout.</p>
     </BlockStack></Card>
+    <Card><BlockStack gap="400">
+      <h2>Connect Google Calendar</h2>
+      <p>Sync confirmed bookings to a Google Calendar so your availability stays up to date.</p>
+      <div><Button onClick={() => navigate("/app/calendar")}>Connect Google Calendar</Button></div>
+    </BlockStack></Card>
   </BlockStack></Page>;
 }
