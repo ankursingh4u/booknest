@@ -282,6 +282,9 @@
       for (const nativeForm of [...nativeForms]) releaseNativeForm(nativeForm);
     }
     function syncNativeControls() {
+      // Only the primary product form carries the booking button, so a theme with a second
+      // (sticky or duplicate) cart form never renders two "Select a booking time" buttons.
+      const primaryForm = findProductForm();
       for (const nativeForm of document.querySelectorAll('form[action*="/cart/add"]')) {
         const id = String(nativeForm.querySelector('[name="id"]')?.value || "");
         if (!productVariants.includes(id)) { if (nativeForms.has(nativeForm)) releaseNativeForm(nativeForm); continue; }
@@ -295,8 +298,9 @@
           // Accelerated checkout may use an iframe, so hold it until variant linking is verified.
           setNativeVisibility(button, linked || pending && accelerated, nativeVisibility);
         }
+        const isPrimary = nativeForm === primaryForm;
         let action = nativeActions.get(nativeForm);
-        if (!action) {
+        if (isPrimary && !action) {
           action = make("button", "Select a booking time", { type: "button", class: "bn-native-booking-trigger" });
           action.addEventListener("click", async () => {
             const current = String(nativeForm.querySelector('[name="id"]')?.value || "");
@@ -309,7 +313,10 @@
           placeNativeAction(nativeForm, action, nativeForm.querySelector('button[type="submit"], input[type="submit"], [name="add"]'));
           nativeActions.set(nativeForm, action);
         }
-        action.hidden = pending; action.style.setProperty("display", pending ? "none" : "block", "important");
+        if (action) {
+          const show = isPrimary && !pending;
+          action.hidden = !show; action.style.setProperty("display", show ? "block" : "none", "important");
+        }
       }
       // While the native form carries the booking button, the block's own chrome at its placed position is redundant.
       root.classList.toggle("bn-replacing", nativeReplacementActive(nativeActions.values()));

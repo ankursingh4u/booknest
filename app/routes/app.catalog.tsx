@@ -125,13 +125,6 @@ export default function Catalog() {
         <MultiField name="staffIds" label="Availabilities" required selected={submitted?.staffIds ?? edit?.selected ?? []} options={staff} />
         <div className="bn-form-grid">{field("durationMin", "Duration (minutes)", "number", "60", true)}{field("capacity", "Seats per time", "number", "1", true)}</div>
         <ProductSetup initialVariant={value.variantId ?? ""} initialPrice={value.price ?? "0.00"} creationKey={submitted?.creationKey || creationKey} initialMode={value.productMode === "new" ? "new" : "existing"} currency={currency} errors={result?.fields} />
-        {value.variantId && <div className="bn-field">
-          <Button loading={themeLink.state !== "idle"} disabled={themeLink.state !== "idle"}
-            onClick={() => themeLink.load("/app/catalog/theme-link?variantId=" + encodeURIComponent(value.variantId!))}>
-            Add booking widget to theme
-          </Button>
-          <small>Opens the theme editor directly on this Event/Service's product page, with the booking block ready to add.</small>
-        </div>}
         <details><summary>Advanced settings (optional)</summary><BlockStack gap="400">
           {field("description", "Description", "textarea")}
           {field("slotIntervalMin", "Slot interval (minutes)", "number", "", false, "Leave blank to offer starts at the Event/Service duration.")}
@@ -144,6 +137,14 @@ export default function Catalog() {
         </BlockStack></details>
       </>}
       <SaveButton>{edit ? "Save changes" : "Create"}</SaveButton>
+      {kind === "services" && edit && value.variantId && <div className="bn-field bn-next-step">
+        <Text as="h3" variant="headingSm">Next: add the booking widget to your storefront</Text>
+        <Button loading={themeLink.state !== "idle"} disabled={themeLink.state !== "idle"}
+          onClick={() => themeLink.load("/app/catalog/theme-link?variantId=" + encodeURIComponent(value.variantId!))}>
+          Add booking widget to theme
+        </Button>
+        <small>Opens the theme editor directly on this Event/Service's product page, with the booking block ready to add.</small>
+      </div>}
     </Form></Card>}</div>}
     {creatingService && <ServiceWizard locations={locations} staff={staff} currency={currency} creationKey={creationKey} result={result} onClose={close} />}
   </BlockStack></Page>;
