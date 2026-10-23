@@ -3,7 +3,7 @@ import { DateTime } from "luxon";
 import { z } from "zod";
 import { Link, redirect, useActionData, useLoaderData, useNavigate, useSearchParams, useRevalidator } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { Page, Card, BlockStack, Text, Badge, Banner, TextField, Select, Button, Tabs, IndexFilters, IndexFiltersMode, useSetIndexFiltersMode, EmptyState } from "@shopify/polaris";
+import { Page, Card, BlockStack, Text, Badge, Banner, TextField, Select, Button, Tabs, EmptyState } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
 import { cancelBooking } from "../lib/bookings/service.server";
 import { formError } from "../lib/admin/errors.server";
@@ -44,7 +44,6 @@ export default function Bookings() {
   const [search] = useSearchParams();
   const navigate = useNavigate();
   const refresh = useRevalidator();
-  const { mode, setMode } = useSetIndexFiltersMode(IndexFiltersMode.Default);
   const [qValue, setQValue] = useState(q);
   const [dayValue, setDayValue] = useState(day);
   const columnOptions = ["customer", "availability", "location", "order"];
@@ -96,32 +95,23 @@ export default function Bookings() {
           onSelect={index => navigate(query({ view: bookingViews[index]!, page: "1" }))} />
         <Button onClick={() => void refresh.revalidate()} disabled={refresh.state !== "idle"} loading={refresh.state !== "idle"}>{refresh.state === "idle" ? "Refresh" : "Refreshing…"}</Button>
       </div>
-      <IndexFilters
-        mode={mode} setMode={setMode}
-        tabs={[]} selected={0} onSelect={() => {}}
-        queryValue={qValue} queryPlaceholder="Name, email, booking or order ID"
-        onQueryChange={setQValue} onQueryClear={() => { setQValue(""); navigate(query({ q: "", page: "1" })); }}
-        onQueryBlur={() => navigate(query({ q: qValue, page: "1" }))}
-        onClearAll={() => navigate(query({ q: "", staff: "", service: "", hideChecked: "", tab: "upcoming", page: "1" }))}
-        filters={[
-          { key: "status", label: "Status", pinned: true, filter: <Select labelHidden label="Status" value={tab}
-            onChange={value => navigate(query({ tab: value, page: "1" }))} options={bookingTabs.map(value => ({ value, label: value === "recent" ? "Recently booked" : title(value) }))} /> },
-          { key: "staff", label: "Availability", pinned: true, filter: <Select labelHidden label="Availability" value={staff}
-            onChange={value => navigate(query({ staff: value, page: "1" }))} options={[{ value: "", label: "All Availabilities" }, ...staffOptions.map(s => ({ value: s.id, label: s.firstName + " " + s.lastName }))]} /> },
-          { key: "service", label: "Event/Service", pinned: true, filter: <Select labelHidden label="Event/Service" value={service}
-            onChange={value => navigate(query({ service: value, page: "1" }))} options={[{ value: "", label: "All Events/Services" }, ...serviceOptions.map(s => ({ value: s.id, label: s.title }))]} /> },
-          { key: "hideChecked", label: "Hide checked-in", pinned: true, filter: <AdminCheckbox name="hideChecked" value="1" label="Hide checked-in"
-            defaultChecked={hideChecked} onToggle={checked => navigate(query({ hideChecked: checked ? "1" : "", page: "1" }))} /> },
-        ]}
-        appliedFilters={[
-          ...(tab !== "upcoming" ? [{ key: "status", label: "Status: " + (tab === "recent" ? "Recently booked" : title(tab)), onRemove: () => navigate(query({ tab: "upcoming", page: "1" })) }] : []),
-          ...(staff ? [{ key: "staff", label: "Availability: " + (() => { const match = staffOptions.find(s => s.id === staff); return match ? match.firstName + " " + match.lastName : ""; })(), onRemove: () => navigate(query({ staff: "", page: "1" })) }] : []),
-          ...(service ? [{ key: "service", label: "Event/Service: " + (serviceOptions.find(s => s.id === service)?.title ?? ""), onRemove: () => navigate(query({ service: "", page: "1" })) }] : []),
-          ...(hideChecked ? [{ key: "hideChecked", label: "Hiding checked-in", onRemove: () => navigate(query({ hideChecked: "", page: "1" })) }] : []),
-        ]}
-        hideQueryField={false}
-        canCreateNewView={false}
-      />
+      <div className="bn-filter-controls">
+        <TextField label="Search bookings" labelHidden value={qValue} placeholder="Name, email, booking or order ID"
+          autoComplete="off" clearButton onClearButtonClick={() => { setQValue(""); navigate(query({ q: "", page: "1" })); }}
+          onChange={setQValue} onBlur={() => { if (qValue !== q) navigate(query({ q: qValue, page: "1" })); }} />
+        <div className="bn-filter-row">
+          <Select labelHidden label="Status" value={tab} onChange={value => navigate(query({ tab: value, page: "1" }))}
+            options={bookingTabs.map(value => ({ value, label: value === "recent" ? "Recently booked" : title(value) }))} />
+          <Select labelHidden label="Availability" value={staff} onChange={value => navigate(query({ staff: value, page: "1" }))}
+            options={[{ value: "", label: "All Availabilities" }, ...staffOptions.map(s => ({ value: s.id, label: s.firstName + " " + s.lastName }))]} />
+          <Select labelHidden label="Event/Service" value={service} onChange={value => navigate(query({ service: value, page: "1" }))}
+            options={[{ value: "", label: "All Events/Services" }, ...serviceOptions.map(s => ({ value: s.id, label: s.title }))]} />
+          <AdminCheckbox name="hideChecked" value="1" label="Hide checked-in" defaultChecked={hideChecked}
+            onToggle={checked => navigate(query({ hideChecked: checked ? "1" : "", page: "1" }))} />
+          {(tab !== "upcoming" || staff || service || hideChecked || q) &&
+            <Button variant="plain" onClick={() => navigate(query({ q: "", staff: "", service: "", hideChecked: "", tab: "upcoming", page: "1" }))}>Clear filters</Button>}
+        </div>
+      </div>
       <div style={{ padding: "var(--bn-space-4)" }}><BlockStack gap="400">
         {view !== "list" && <TextField label="Date" type="date" value={dayValue} onChange={value => { setDayValue(value); navigate(query({ day: value })); }} autoComplete="off" />}
         <details><summary>Visible details</summary><fieldset className="bn-options"><legend>Show in booking cards</legend>
