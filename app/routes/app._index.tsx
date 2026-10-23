@@ -57,20 +57,25 @@ export default function Bookings() {
     const key = view === "availability" ? booking.staffId : local(booking.startAt).toISODate()!;
     groups.set(key, [...(groups.get(key) ?? []), booking]);
   }
-  const card = (booking: typeof bookings[number]) => <Card key={booking.id}><BlockStack gap="400">
+  const card = (booking: typeof bookings[number]) => <Card key={booking.id}><div className="bn-booking-card"><BlockStack gap="300">
     <div className="bn-heading-row"><Text as="h2" variant="headingMd">{booking.service.title}</Text><Badge tone={booking.status === "NEEDS_REVIEW" ? "critical" : booking.status === "CONFIRMED" ? "success" : undefined}>{booking.status.replaceAll("_", " ")}</Badge></div>
-    <p>{local(booking.startAt).toFormat("ccc, dd LLL yyyy · h:mm a")} – {local(booking.endAt).toFormat("h:mm a")} · {booking.quantity} guest(s)</p>
-    {columns.has("customer") && <p>{booking.customerName} · {booking.customerEmail}</p>}{columns.has("availability") && <p>{booking.staff.firstName} {booking.staff.lastName}</p>}{columns.has("location") && <p>{booking.location.name}</p>}
-    <details><summary>Booking details</summary><p>ID: {booking.id}</p><p>Source: {booking.source}</p>{columns.has("order") && booking.orderId && <p>Shopify order: {booking.orderId}</p>}</details>
+    <div className="bn-booking-lines">
+      <p className="bn-booking-when">{local(booking.startAt).toFormat("ccc, dd LLL yyyy · h:mm a")} – {local(booking.endAt).toFormat("h:mm a")} · {booking.quantity} guest(s)</p>
+      {columns.has("customer") && <p>{booking.customerName} · {booking.customerEmail}</p>}
+      {columns.has("availability") && <p>{booking.staff.firstName} {booking.staff.lastName}</p>}
+      {columns.has("location") && <p>{booking.location.name}</p>}
+    </div>
+    <details><summary>Booking details</summary><div className="bn-booking-lines"><p>ID: {booking.id}</p><p>Source: {booking.source}</p>{columns.has("order") && booking.orderId && <p>Shopify order: {booking.orderId}</p>}</div></details>
     {booking.status === "NEEDS_REVIEW" && <Banner tone="warning">This paid booking needs review. Check the order and arrange another time or a refund with the customer.</Banner>}
     {booking.status === "NEEDS_REVIEW" && <Link to={"/app/bookings/" + booking.id + "/reschedule"}>Review and confirm a new time</Link>}
-    {booking.status === "CONFIRMED" && <div className="bn-heading-row">
-      <AdminRecordAction id={booking.id} intent={booking.checkedInAt ? "undo-checkin" : "checkin"}>{booking.checkedInAt ? "Undo check-in" : "Check in"}</AdminRecordAction>
-      <Link to={"/app/bookings/" + booking.id + "/reschedule"}>Reschedule</Link>
-      <AdminRecordAction id={booking.id} intent="complete">Complete</AdminRecordAction><AdminRecordAction id={booking.id} intent="no-show">No-show</AdminRecordAction>
+    {booking.status === "CONFIRMED" && <div className="bn-actions">
+      <AdminRecordAction id={booking.id} intent={booking.checkedInAt ? "undo-checkin" : "checkin"} variant="secondary">{booking.checkedInAt ? "Undo check-in" : "Check in"}</AdminRecordAction>
+      <Button onClick={() => navigate("/app/bookings/" + booking.id + "/reschedule")}>Reschedule</Button>
+      <AdminRecordAction id={booking.id} intent="complete" variant="secondary">Complete</AdminRecordAction>
+      <AdminRecordAction id={booking.id} intent="no-show" variant="secondary">No-show</AdminRecordAction>
     </div>}
-    {["CONFIRMED", "PENDING", "NEEDS_REVIEW"].includes(booking.status) && <details><summary>Cancel booking</summary><p>Cancellation does not refund a Shopify order. Handle refunds in Shopify.</p><AdminRecordAction id={booking.id} intent="cancel">Confirm cancellation</AdminRecordAction></details>}
-  </BlockStack></Card>;
+    {["CONFIRMED", "PENDING", "NEEDS_REVIEW"].includes(booking.status) && <details><summary>Cancel booking</summary><BlockStack gap="200"><p>Cancellation does not refund a Shopify order. Handle refunds in Shopify.</p><div className="bn-actions"><AdminRecordAction id={booking.id} intent="cancel" variant="secondary">Confirm cancellation</AdminRecordAction></div></BlockStack></details>}
+  </BlockStack></div></Card>;
   const anchor = DateTime.fromISO(day, { zone: timezone });
   const move = (direction: number) => anchor.plus(view === "calendar" ? { months: direction } : { days: direction * (view === "agenda" ? 7 : 1) }).toISODate()!;
   return <Page title="Bookings" subtitle="View, filter, and manage customer bookings" primaryAction={{ content: "Add a booking", url: "/app/bookings/new" }}><BlockStack gap="400">

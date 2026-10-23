@@ -100,10 +100,10 @@ export function AdminButton({ children, onClick, disabled = false, loading = fal
   return <Button onClick={onClick} disabled={disabled} loading={loading} variant={variant} submit={type === "submit"}>{children}</Button>;
 }
 
-export function AdminSaveButton({ children = "Save" }: { children?: string }) {
+export function AdminSaveButton({ children = "Save", variant = "primary" }: { children?: string; variant?: "primary" | "secondary" }) {
   const navigation = useNavigation();
   const busy = navigation.state !== "idle";
-  return <Button submit variant="primary" loading={busy}>{busy ? "Saving…" : children}</Button>;
+  return <Button submit variant={variant === "primary" ? "primary" : undefined} loading={busy}>{busy ? "Saving…" : children}</Button>;
 }
 
 export function AdminChoiceCard({ name, value, label, description, checked, onSelect }: {
@@ -115,9 +115,9 @@ export function AdminChoiceCard({ name, value, label, description, checked, onSe
   </label>;
 }
 
-export function AdminRecordAction({ id, intent, children }: { id: string; intent: string; children: string }) {
+export function AdminRecordAction({ id, intent, children, variant = "primary" }: { id: string; intent: string; children: string; variant?: "primary" | "secondary" }) {
   return <Form method="post">
     <input type="hidden" name="id" value={id} /><input type="hidden" name="intent" value={intent} />
-    <AdminSaveButton>{children}</AdminSaveButton>
+    <AdminSaveButton variant={variant}>{children}</AdminSaveButton>
   </Form>;
 }
