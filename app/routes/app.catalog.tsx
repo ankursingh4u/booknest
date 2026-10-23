@@ -83,7 +83,7 @@ export default function Catalog() {
         <p>{rows.length ? "Try a different search or switch tabs." : "Get started by adding a " + noun.toLowerCase() + "."}</p>
       </EmptyState></div> : <BlockStack gap="0">
         {visible.map(row => <article className="bn-record" key={row.id} style={{ padding: "0 var(--bn-space-4)" }}>
-          <div><Link to={"?edit=" + row.id} className="bn-record-title">{row.title}</Link><p>{row.summary}</p>{kind === "services" && <p>Event/Service ID: <code>{row.id}</code></p>}
+          <div><Button onClick={() => navigate("?edit=" + row.id)}>{row.title}</Button><p>{row.summary}</p>{kind === "services" && <p>Event/Service ID: <code>{row.id}</code></p>}
             <Badge tone={row.active ? "success" : undefined}>{row.active ? "Active" : "Archived"}</Badge>
             {kind === "availabilities" && row.active && !row.values.hasHours && <Badge tone="warning">No working hours set</Badge>}
           </div>
