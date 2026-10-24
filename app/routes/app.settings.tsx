@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Form, Link, redirect, useActionData, useLoaderData, useSearchParams } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { Page, Card, BlockStack, Text, Banner } from "@shopify/polaris";
+import { Page, Card, BlockStack, Text, Banner, Button } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
 import { timezoneSchema } from "../lib/admin/schemas";
 import { formError } from "../lib/admin/errors.server";
@@ -10,7 +10,8 @@ import { AdminField as Field, AdminSaveButton as SaveButton, AdminTimezoneField 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { db, shop } = await requireShop(request);
   return { settings: await db.shop.findUniqueOrThrow({ where: { id: shop.id }, select: { domain: true, timezone: true, email: true, currency: true, plan: true } }),
-    emailConfigured: Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM) };
+    emailConfigured: Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM),
+    calendarConfigured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REDIRECT_URI) };
 }
 export async function action({ request }: ActionFunctionArgs) {
   const { shop, db, admin } = await requireShop(request);
@@ -25,7 +26,7 @@ export async function action({ request }: ActionFunctionArgs) {
   } catch (error) { return formError(error); }
 }
 export default function Settings() {
-  const { settings, emailConfigured } = useLoaderData<typeof loader>();
+  const { settings, emailConfigured, calendarConfigured } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>(); const [search] = useSearchParams();
   return <Page title="Settings" subtitle="Store preferences, storefront widget, and email configuration"><BlockStack gap="400">
     {result && <Banner tone="critical">{result.error}{Object.values(result.fields).flat().map((error, i) => <p key={i}>{error}</p>)}</Banner>}
@@ -39,6 +40,10 @@ export default function Settings() {
       <p>Add the BookNest booking app block to your product template. The widget uses the Event/Service linked to the product variant.</p>
       <a href={"https://" + settings.domain + "/admin/themes/current/editor"} target="_blank" rel="noreferrer">Open theme editor</a>
     </BlockStack></Card>
+    <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Google Calendar</Text>
+      <p>Connect each Availability's Google Calendar so confirmed bookings appear on their calendar automatically.{calendarConfigured ? "" : " Google Calendar sync still needs application credentials before an Availability can connect."}</p>
+      <div><Button url="/app/calendar">{calendarConfigured ? "Connect Google Calendar" : "Google Calendar setup"}</Button></div>
+    </BlockStack></Card>
     <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Email notifications</Text>
       <p>{emailConfigured ? "Confirmation, reschedule, cancellation, and reminder emails are configured." : "Email delivery needs sender configuration before customers can receive booking messages."}</p>
       <Link to="/app/notifications">Edit email templates</Link>
@@ -50,7 +55,6 @@ export default function Settings() {
         <Link to="/app/manage/locations">Locations</Link>
         <Link to="/app/schedules">Schedules</Link>
         <Link to="/app/intake">Intake Questions</Link>
-        <Link to="/app/calendar">Google Calendar</Link>
         <Link to="/app/support">Support</Link>
       </div>
     </BlockStack></Card>
