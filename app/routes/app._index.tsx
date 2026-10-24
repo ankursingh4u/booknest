@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DateTime } from "luxon";
 import { z } from "zod";
 import { Link, redirect, useActionData, useLoaderData, useNavigate, useSearchParams, useRevalidator } from "react-router";
@@ -47,6 +47,13 @@ export default function Bookings() {
   const refresh = useRevalidator();
   const [qValue, setQValue] = useState(q);
   const [dayValue, setDayValue] = useState(day);
+  const [openDay, setOpenDay] = useState<string | null>(null);
+  const dayDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = dayDialog.current; if (!dialog) return;
+    if (openDay && !dialog.open) dialog.showModal();
+    else if (!openDay && dialog.open) dialog.close();
+  }, [openDay]);
   const columnOptions = ["customer", "availability", "location", "order"];
   const columns = new Set(search.has("columnsConfigured") ? search.getAll("columns") : columnOptions);
   const query = (changes: Record<string, string>) => { const params = new URLSearchParams(search); params.delete("saved"); for (const [key, value] of Object.entries(changes)) params.set(key, value); return "?" + params; };
@@ -139,11 +146,26 @@ export default function Bookings() {
       <span className="bn-legend-item bn-day-full">Full</span>
       <span className="bn-legend-item bn-day-closed">Closed / past</span>
     </div>}
-    {view === "calendar" ? <div className="bn-calendar" aria-label="Monthly bookings">{calendarDays(day, timezone).map(cell => <section key={cell.date} className={"bn-calendar-day" + (cell.inMonth ? " bn-day-" + (load[cell.date] ?? "closed") : " bn-calendar-padding")}>
-      <h2>{cell.label}</h2>{cell.inMonth && (groups.get(cell.date) ?? []).map(booking => <Link className="bn-calendar-booking" key={booking.id} to={query({ view: "list", q: booking.id, tab: "all", page: "1" })}>
-        <time>{local(booking.startAt).toFormat("h:mm a")}</time><strong>{booking.service.title}</strong>{columns.has("customer") && <span>{booking.customerName || booking.customerEmail}</span>}
-      </Link>)}
-    </section>)}</div> : view === "list" ? bookings.map(card) : [...groups.entries()].map(([key, rows]) => <section key={key} className="bn-booking-group">
+    {view === "calendar" ? <><div className="bn-calendar" aria-label="Monthly bookings">{calendarDays(day, timezone).map(cell => {
+      const rows = cell.inMonth ? (groups.get(cell.date) ?? []) : [];
+      return <button type="button" key={cell.date} disabled={!cell.inMonth}
+        className={"bn-calendar-day" + (cell.inMonth ? " bn-day-" + (load[cell.date] ?? "closed") : " bn-calendar-padding")}
+        onClick={() => setOpenDay(cell.date)}
+        aria-label={cell.label + (rows.length ? ", " + rows.length + " booking" + (rows.length > 1 ? "s" : "") + ", click to view" : "")}>
+        <span className="bn-cal-date">{cell.label}</span>
+        {rows.length > 0 && <span className="bn-cal-count">{rows.length} booking{rows.length > 1 ? "s" : ""}</span>}
+      </button>;
+    })}</div>
+    <dialog ref={dayDialog} className="bn-day-dialog" onClose={() => setOpenDay(null)} onClick={event => { if (event.target === dayDialog.current) setOpenDay(null); }}>
+      {openDay && <BlockStack gap="300">
+        <div className="bn-heading-row"><Text as="h2" variant="headingMd">{DateTime.fromISO(openDay, { zone: timezone }).toFormat("cccc, dd LLL yyyy")}</Text><Button onClick={() => setOpenDay(null)}>Close</Button></div>
+        {(groups.get(openDay) ?? []).length === 0 ? <p>No bookings on this day.</p> : <BlockStack gap="200">
+          {(groups.get(openDay) ?? []).map(booking => <Link className="bn-calendar-booking" key={booking.id} to={query({ view: "list", q: booking.id, tab: "all", page: "1" })} onClick={() => setOpenDay(null)}>
+            <time>{local(booking.startAt).toFormat("h:mm a")} – {local(booking.endAt).toFormat("h:mm a")}</time><strong>{booking.service.title}</strong><span>{booking.customerName || booking.customerEmail} · {booking.status.replaceAll("_", " ")}</span>
+          </Link>)}
+        </BlockStack>}
+      </BlockStack>}
+    </dialog></> : view === "list" ? bookings.map(card) : [...groups.entries()].map(([key, rows]) => <section key={key} className="bn-booking-group">
       <h2>{view === "availability" ? rows[0]!.staff.firstName + " " + rows[0]!.staff.lastName : DateTime.fromISO(key, { zone: timezone }).toFormat("cccc, dd LLL yyyy")}</h2>
       <BlockStack gap="400">{rows.map(card)}</BlockStack>
     </section>)}
