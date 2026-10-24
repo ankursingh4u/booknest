@@ -41,15 +41,19 @@
     if (!id || !productVariants.includes(id)) return "pass";
     return status.has(id) ? status.get(id) ? "book" : "pass" : "resolve";
   }
-  function variantResolver(loader) {
+  function variantResolver(loader, allowed) {
     const pending = new Map(), results = new Map(), status = new Map();
+    // When `allowed` (the product's variant ids) is given, a service linked to ANY of them counts as
+    // bookable from any selected variant; otherwise fall back to matching only the loaded variant.
+    const keep = (service, id) => service.variantId == null
+      || (allowed ? allowed.includes(String(service.variantId).split("/").pop()) : String(service.variantId).split("/").pop() === id);
     return {
       status,
       load(id) {
         if (results.has(id)) return Promise.resolve(results.get(id));
         if (pending.has(id)) return pending.get(id);
         const promise = Promise.resolve().then(() => loader(id)).then(data => {
-          const matching = { ...data, services: data.services.filter(service => service.variantId == null || String(service.variantId).split("/").pop() === id) };
+          const matching = { ...data, services: data.services.filter(service => keep(service, id)) };
           results.set(id, matching); status.set(id, matching.services.length > 0); return matching;
         }).finally(() => pending.delete(id));
         pending.set(id, promise);
@@ -274,7 +278,9 @@
     wrapper.append(heading, status, errors, retry, form); root.append(wrapper);
     const money = cents => new Intl.NumberFormat(locale, { style: "currency", currency: catalog.currency }).format(cents / 100);
     const clock = timestamp => new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit", hour12: !time24, timeZone: timezone.value || viewerZone }).format(new Date(timestamp));
-    const resolver = variantResolver(id => request(api + "/catalog?" + new URLSearchParams({ variantId: id })));
+    // Query the whole product (every variant) so booking shows from any selected variant/colour; the
+    // booking still checks out against each service's own linked variant (server-side).
+    const resolver = variantResolver(() => request(api + "/catalog?" + new URLSearchParams({ variantIds: productVariants.join(",") })), productVariants);
     const nativeVisibility = new Map(), nativeActions = new Map(), nativeForms = new Set();
     function releaseNativeForm(nativeForm) {
       for (const button of nativeVisibility.keys()) if (nativeForm.contains(button)) setNativeVisibility(button, false, nativeVisibility);
@@ -548,7 +554,7 @@
       if (popup && !wrapper.open) { root.insertBefore(status, wrapper); root.insertBefore(errors, wrapper); root.insertBefore(retry, wrapper); }
       try {
         let data;
-        if (productVariants.length && variant) data = await resolver.load(variant);
+        if (productVariants.length) data = await resolver.load(variant || productVariants[0]);
         else {
           const query = new URLSearchParams();
           if (root.dataset.serviceId) query.set("serviceId", root.dataset.serviceId);
@@ -565,6 +571,9 @@
           return data;
         }
         heading.after(status, errors, retry);
+        // Default to the service linked to the selected variant, if any, otherwise the first service.
+        const preferred = data.services.find(item => item.variantId && String(item.variantId).split("/").pop() === currentVariantId);
+        if (preferred) service.value = preferred.id;
         trigger.hidden = false; renderShowcase(); chooseService(); return data;
       } catch (error) {
         if (generation === catalogVersion) failed(error, () => loadCatalog(currentVariant()));

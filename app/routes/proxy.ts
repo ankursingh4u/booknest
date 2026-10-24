@@ -47,8 +47,11 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     if (params.endpoint !== "catalog") return json({ error: "Not found." }, 404);
     const serviceId = url.searchParams.get("serviceId");
     const variant = url.searchParams.get("variantId");
+    // `variantIds` lets the storefront widget match every variant of a product at once, so the
+    // booking widget shows from whichever variant/colour the shopper has selected.
+    const variantGids = (url.searchParams.get("variantIds") || "").split(",").map(id => id.trim()).filter(id => /^\d+$/.test(id)).map(id => "gid://shopify/ProductVariant/" + id);
     const settings = await db.shop.findUniqueOrThrow({ where: { id: shop.id }, select: { timezone: true, currency: true } });
-    const services = await db.service.findMany({ where: { active: true, ...(serviceId ? { id: serviceId } : variant ? { variantId: "gid://shopify/ProductVariant/" + variant } : {}),
+    const services = await db.service.findMany({ where: { active: true, ...(serviceId ? { id: serviceId } : variantGids.length ? { variantId: { in: variantGids } } : variant ? { variantId: "gid://shopify/ProductVariant/" + variant } : {}),
       location: { active: true, shopId: shop.id } }, take: 100,
       select: { id: true, title: true, description: true, durationMin: true, maxAdvanceDays: true, capacity: true, priceCents: true, variantId: true, depositType: true, depositValue: true,
         location: { select: { timezone: true, name: true } }, questions: { where: { active: true }, select: { id: true, label: true, type: true, required: true, options: true }, orderBy: { sortOrder: "asc" } } } });

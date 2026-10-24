@@ -52,6 +52,14 @@ describe("storefront booking safeguards", () => {
     expect((await resolver.load("11")).services.map((service: { id: string }) => service.id)).toEqual(["matching"]);
     expect(resolver.status.get("11")).toBe(true);
   });
+  it("shows a service linked to any variant of the product, from whichever variant is selected", async () => {
+    const services = [{ id: "a", variantId: "gid://shopify/ProductVariant/11" }, { id: "b", variantId: "gid://shopify/ProductVariant/22" }, { id: "elsewhere", variantId: "gid://shopify/ProductVariant/99" }];
+    const resolver = core().variantResolver(async () => ({ services }), ["11", "22"]);
+    expect((await resolver.load("11")).services.map((service: { id: string }) => service.id)).toEqual(["a", "b"]);
+    expect(resolver.status.get("11")).toBe(true);
+    expect((await resolver.load("22")).services.map((service: { id: string }) => service.id)).toEqual(["a", "b"]);
+    expect(resolver.status.get("22")).toBe(true);
+  });
   it("calculates keyboard calendar navigation without timezone arithmetic", () => {
     const helpers = core();
     expect(helpers.calendarKeyDate("2028-03-31", "PageUp")).toBe("2028-02-29");
