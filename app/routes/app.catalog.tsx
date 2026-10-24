@@ -82,12 +82,17 @@ export default function Catalog() {
         image="https://cdn.shopify.com/s/files/1/0757/9955/files/empty-state.svg" action={rows.length ? undefined : { content: "+ Create", url: "?new=1" }}>
         <p>{rows.length ? "Try a different search or switch tabs." : "Get started by adding a " + noun.toLowerCase() + "."}</p>
       </EmptyState></div> : <BlockStack gap="0">
-        {visible.map(row => <article className="bn-record" key={row.id} style={{ padding: "0 var(--bn-space-4)" }}>
-          <div><Button onClick={() => navigate("?edit=" + row.id)}>{row.title}</Button><p>{row.summary}</p>{kind === "services" && <p>Event/Service ID: <code>{row.id}</code></p>}
-            <Badge tone={row.active ? "success" : undefined}>{row.active ? "Active" : "Archived"}</Badge>
-            {kind === "availabilities" && row.active && !row.values.hasHours && <Badge tone="warning">No working hours set</Badge>}
+        {visible.map(row => <article className="bn-record" key={row.id}>
+          <div className="bn-record-head">
+            <Button onClick={() => navigate("?edit=" + row.id)}>{row.title}</Button>
+            <div className="bn-record-badges">
+              <Badge tone={row.active ? "success" : undefined}>{row.active ? "Active" : "Archived"}</Badge>
+              {kind === "availabilities" && row.active && !row.values.hasHours && <Badge tone="warning">No working hours set</Badge>}
+            </div>
           </div>
-          <div className="bn-heading-row">
+          <p className="bn-record-meta">{row.summary}</p>
+          {kind === "services" && <p className="bn-record-id">ID: <code>{row.id}</code></p>}
+          <div className="bn-record-actions">
             {kind === "availabilities" && row.active && <Button variant={row.values.hasHours ? undefined : "primary"} url={"/app/schedules?staffId=" + row.id}>Set working hours</Button>}
             <RecordAction id={row.id} intent={row.active ? "archive" : "restore"}>{row.active ? "Archive" : "Restore"}</RecordAction>
           </div>
