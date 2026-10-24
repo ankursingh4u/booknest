@@ -11,7 +11,7 @@ import { BookingError, customerInput, matchesReservation, reservationInput, type
 import { dayLoadStatus, type DayLoad } from "./views";
 
 type Database = Pick<Prisma.TransactionClient, "service" | "location" | "serviceStaff" | "staffMember" | "availabilityRule" | "additionalHours" | "blackout" | "timeOffRequest" | "booking" | "reservation" | "shop" | "intakeQuestion" | "intakeAnswer">;
-async function availabilityForWindow(db: Database, shopId: string, serviceId: string, day: string, quantity: number, staffId?: string, excludeBookingId?: string, excludeReservationId?: string, now: DateTime = DateTime.utc(), enforceNotice = true, viewerTimezone?: string, monthRange = false, skipCalendarBusy = false) {
+async function availabilityForWindow(db: Database, shopId: string, serviceId: string, day: string, quantity: number, staffId?: string, excludeBookingId?: string, excludeReservationId?: string, now: DateTime = DateTime.utc(), enforceNotice = true, viewerTimezone?: string, monthRange = false) {
   const service = await db.service.findFirst({ where: { id: serviceId, active: true } });
   if (!service) throw new BookingError("Event/Service not found.", 404);
   const location = await db.location.findFirst({ where: { id: service.locationId, active: true } });
@@ -37,7 +37,7 @@ async function availabilityForWindow(db: Database, shopId: string, serviceId: st
       ...(excludeReservationId ? { id: { not: excludeReservationId } } : {}) }, include: { service: { select: { bufferBefore: true, bufferAfter: true } } } }),
     db.shop.findUniqueOrThrow({ where: { id: shopId }, select: { currency: true, domain: true } }),
   ]);
-  const calendarBusy = skipCalendarBusy ? [] : (await Promise.all(staff.filter(person => person.googleCalendarId).map(person => googleBusyIntervals(shopId, person.id, person.googleCalendarId!, start.minus({ days: 1 }), end.plus({ days: 2 }))))).flat();
+  const calendarBusy = (await Promise.all(staff.filter(person => person.googleCalendarId).map(person => googleBusyIntervals(shopId, person.id, person.googleCalendarId!, start.minus({ days: 1 }), end.plus({ days: 2 }))))).flat();
   const from = (value: Date) => DateTime.fromJSDate(value, { zone: "utc" });
   const serviceRules = rules.filter(rule => rule.serviceId === serviceId);
   const slots = computeSlots({
@@ -76,32 +76,43 @@ export async function listMonthAvailability(shopId: string, serviceId: string, m
   return { timezone: result.displayTimezone, today: now.setZone(result.displayTimezone).toISODate()!,
     lastDate: now.setZone(result.location.timezone).plus({ days: result.service.maxAdvanceDays }).setZone(result.displayTimezone).toISODate()!, days };
 }
-// Per-day fill status for the merchant calendar across all active Events/Services, so days can be
-// coloured green (free) -> amber (filling up) -> red (full). Skips the Google busy fetch for speed.
+// Per-day fill status for the merchant calendar, as booked minutes vs. working minutes across all
+// active Availabilities — so days colour green (free) -> amber (filling up) -> red (full). Measured
+// in staff working time so overlapping Events/Services sharing one Availability aren't double-counted.
 export async function monthLoad(shopId: string, month: string, timezone: string, now: DateTime = DateTime.utc()): Promise<Record<string, DayLoad>> {
   if (!/^\d{4}-\d{2}$/.test(month)) return {};
   const db = getShopDatabase(shopId);
-  const services = await db.service.findMany({ where: { active: true, location: { active: true } }, select: { id: true }, take: 30 });
-  const free = new Map<string, number>();
-  for (const svc of services) {
-    const result = await availabilityForWindow(db, shopId, svc.id, month + "-01", 1, undefined, undefined, undefined, now, true, timezone, true, true).catch(() => null);
-    if (!result) continue;
-    for (const slot of result.slots) {
-      const date = slot.startAt.setZone(result.displayTimezone).toISODate();
-      if (date) free.set(date, (free.get(date) ?? 0) + slot.remaining);
-    }
-  }
   const start = DateTime.fromISO(month + "-01", { zone: timezone }).startOf("month");
-  const bookings = await db.booking.findMany({ where: { status: { in: ["CONFIRMED", "PENDING"] },
-    startAt: { gte: start.toUTC().toJSDate(), lt: start.plus({ months: 1 }).toUTC().toJSDate() } }, select: { startAt: true, quantity: true } });
+  const [staff, rules, bookings] = await Promise.all([
+    db.staffMember.findMany({ where: { active: true }, select: { id: true, timezone: true } }),
+    db.availabilityRule.findMany({ where: { staffId: { not: null } }, select: { staffId: true, weekday: true, startTime: true, endTime: true } }),
+    db.booking.findMany({ where: { status: { in: ["CONFIRMED", "PENDING"] },
+      startAt: { gte: start.toUTC().toJSDate(), lt: start.plus({ months: 1 }).toUTC().toJSDate() } }, select: { startAt: true, endAt: true } }),
+  ]);
+  const zoneFor = new Map(staff.map(person => [person.id, person.timezone || timezone]));
+  const activeStaff = new Set(staff.map(person => person.id));
+  const toMinutes = (time: string) => { const [h, m] = time.split(":").map(Number); return (h || 0) * 60 + (m || 0); };
+  const working = new Map<string, number>();
+  for (let d = start; d < start.plus({ months: 1 }); d = d.plus({ days: 1 })) {
+    let total = 0;
+    for (const rule of rules) {
+      if (!rule.staffId || !activeStaff.has(rule.staffId)) continue;
+      if (d.setZone(zoneFor.get(rule.staffId) || timezone).weekday % 7 !== rule.weekday) continue;
+      total += Math.max(0, toMinutes(rule.endTime) - toMinutes(rule.startTime));
+    }
+    if (total > 0) working.set(d.toISODate()!, total);
+  }
   const booked = new Map<string, number>();
   for (const booking of bookings) {
     const date = DateTime.fromJSDate(booking.startAt).setZone(timezone).toISODate();
-    if (date) booked.set(date, (booked.get(date) ?? 0) + booking.quantity);
+    if (date) booked.set(date, (booked.get(date) ?? 0) + Math.max(0, Math.round((booking.endAt.getTime() - booking.startAt.getTime()) / 60000)));
   }
   const today = now.setZone(timezone).toISODate()!;
   const status: Record<string, DayLoad> = {};
-  for (const date of new Set([...free.keys(), ...booked.keys()])) status[date] = dayLoadStatus(free.get(date) ?? 0, booked.get(date) ?? 0, date < today);
+  for (const date of new Set([...working.keys(), ...booked.keys()])) {
+    const workMin = working.get(date) ?? 0, bookMin = booked.get(date) ?? 0;
+    status[date] = dayLoadStatus(Math.max(0, workMin - bookMin), bookMin, date < today);
+  }
   return status;
 }
 const waitlistInput = z.object({
