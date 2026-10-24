@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { DateTime } from "luxon";
 import { z } from "zod";
 import { Link, redirect, useActionData, useLoaderData, useNavigate, useSearchParams, useRevalidator } from "react-router";
@@ -48,11 +48,11 @@ export default function Bookings() {
   const [qValue, setQValue] = useState(q);
   const [dayValue, setDayValue] = useState(day);
   const [openDay, setOpenDay] = useState<string | null>(null);
-  const dayDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    const dialog = dayDialog.current; if (!dialog) return;
-    if (openDay && !dialog.open) dialog.showModal();
-    else if (!openDay && dialog.open) dialog.close();
+    if (!openDay) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setOpenDay(null); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, [openDay]);
   const columnOptions = ["customer", "availability", "location", "order"];
   const columns = new Set(search.has("columnsConfigured") ? search.getAll("columns") : columnOptions);
@@ -156,16 +156,16 @@ export default function Bookings() {
         {rows.length > 0 && <span className="bn-cal-count">{rows.length} booking{rows.length > 1 ? "s" : ""}</span>}
       </button>;
     })}</div>
-    <dialog ref={dayDialog} className="bn-day-dialog" onClose={() => setOpenDay(null)} onClick={event => { if (event.target === dayDialog.current) setOpenDay(null); }}>
-      {openDay && <BlockStack gap="300">
+    {openDay && <div className="bn-day-overlay" role="dialog" aria-modal="true" onClick={() => setOpenDay(null)}>
+      <div className="bn-day-panel" onClick={event => event.stopPropagation()}><BlockStack gap="300">
         <div className="bn-heading-row"><Text as="h2" variant="headingMd">{DateTime.fromISO(openDay, { zone: timezone }).toFormat("cccc, dd LLL yyyy")}</Text><Button onClick={() => setOpenDay(null)}>Close</Button></div>
         {(groups.get(openDay) ?? []).length === 0 ? <p>No bookings on this day.</p> : <BlockStack gap="200">
           {(groups.get(openDay) ?? []).map(booking => <Link className="bn-calendar-booking" key={booking.id} to={query({ view: "list", q: booking.id, tab: "all", page: "1" })} onClick={() => setOpenDay(null)}>
             <time>{local(booking.startAt).toFormat("h:mm a")} – {local(booking.endAt).toFormat("h:mm a")}</time><strong>{booking.service.title}</strong><span>{booking.customerName || booking.customerEmail} · {booking.status.replaceAll("_", " ")}</span>
           </Link>)}
         </BlockStack>}
-      </BlockStack>}
-    </dialog></> : view === "list" ? bookings.map(card) : [...groups.entries()].map(([key, rows]) => <section key={key} className="bn-booking-group">
+      </BlockStack></div>
+    </div>}</> : view === "list" ? bookings.map(card) : [...groups.entries()].map(([key, rows]) => <section key={key} className="bn-booking-group">
       <h2>{view === "availability" ? rows[0]!.staff.firstName + " " + rows[0]!.staff.lastName : DateTime.fromISO(key, { zone: timezone }).toFormat("cccc, dd LLL yyyy")}</h2>
       <BlockStack gap="400">{rows.map(card)}</BlockStack>
     </section>)}
