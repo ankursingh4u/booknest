@@ -8,9 +8,10 @@ import { customerChangeError } from "./policy";
 import { getShopDatabase, withShopTransaction } from "../../db.server";
 import { computeSlots } from "../availability/engine";
 import { BookingError, customerInput, matchesReservation, reservationInput, type ReservationInput } from "./validation";
+import { dayLoadStatus, type DayLoad } from "./views";
 
 type Database = Pick<Prisma.TransactionClient, "service" | "location" | "serviceStaff" | "staffMember" | "availabilityRule" | "additionalHours" | "blackout" | "timeOffRequest" | "booking" | "reservation" | "shop" | "intakeQuestion" | "intakeAnswer">;
-async function availabilityForWindow(db: Database, shopId: string, serviceId: string, day: string, quantity: number, staffId?: string, excludeBookingId?: string, excludeReservationId?: string, now: DateTime = DateTime.utc(), enforceNotice = true, viewerTimezone?: string, monthRange = false) {
+async function availabilityForWindow(db: Database, shopId: string, serviceId: string, day: string, quantity: number, staffId?: string, excludeBookingId?: string, excludeReservationId?: string, now: DateTime = DateTime.utc(), enforceNotice = true, viewerTimezone?: string, monthRange = false, skipCalendarBusy = false) {
   const service = await db.service.findFirst({ where: { id: serviceId, active: true } });
   if (!service) throw new BookingError("Event/Service not found.", 404);
   const location = await db.location.findFirst({ where: { id: service.locationId, active: true } });
@@ -36,7 +37,7 @@ async function availabilityForWindow(db: Database, shopId: string, serviceId: st
       ...(excludeReservationId ? { id: { not: excludeReservationId } } : {}) }, include: { service: { select: { bufferBefore: true, bufferAfter: true } } } }),
     db.shop.findUniqueOrThrow({ where: { id: shopId }, select: { currency: true, domain: true } }),
   ]);
-  const calendarBusy = (await Promise.all(staff.filter(person => person.googleCalendarId).map(person => googleBusyIntervals(shopId, person.id, person.googleCalendarId!, start.minus({ days: 1 }), end.plus({ days: 2 }))))).flat();
+  const calendarBusy = skipCalendarBusy ? [] : (await Promise.all(staff.filter(person => person.googleCalendarId).map(person => googleBusyIntervals(shopId, person.id, person.googleCalendarId!, start.minus({ days: 1 }), end.plus({ days: 2 }))))).flat();
   const from = (value: Date) => DateTime.fromJSDate(value, { zone: "utc" });
   const serviceRules = rules.filter(rule => rule.serviceId === serviceId);
   const slots = computeSlots({
@@ -74,6 +75,34 @@ export async function listMonthAvailability(shopId: string, serviceId: string, m
   for (let date = result.start; date < result.end; date = date.plus({ days: 1 })) days.push({ date: date.toISODate()!, available: available.has(date.toISODate()!) });
   return { timezone: result.displayTimezone, today: now.setZone(result.displayTimezone).toISODate()!,
     lastDate: now.setZone(result.location.timezone).plus({ days: result.service.maxAdvanceDays }).setZone(result.displayTimezone).toISODate()!, days };
+}
+// Per-day fill status for the merchant calendar across all active Events/Services, so days can be
+// coloured green (free) -> amber (filling up) -> red (full). Skips the Google busy fetch for speed.
+export async function monthLoad(shopId: string, month: string, timezone: string, now: DateTime = DateTime.utc()): Promise<Record<string, DayLoad>> {
+  if (!/^\d{4}-\d{2}$/.test(month)) return {};
+  const db = getShopDatabase(shopId);
+  const services = await db.service.findMany({ where: { active: true, location: { active: true } }, select: { id: true }, take: 30 });
+  const free = new Map<string, number>();
+  for (const svc of services) {
+    const result = await availabilityForWindow(db, shopId, svc.id, month + "-01", 1, undefined, undefined, undefined, now, true, timezone, true, true).catch(() => null);
+    if (!result) continue;
+    for (const slot of result.slots) {
+      const date = slot.startAt.setZone(result.displayTimezone).toISODate();
+      if (date) free.set(date, (free.get(date) ?? 0) + slot.remaining);
+    }
+  }
+  const start = DateTime.fromISO(month + "-01", { zone: timezone }).startOf("month");
+  const bookings = await db.booking.findMany({ where: { status: { in: ["CONFIRMED", "PENDING"] },
+    startAt: { gte: start.toUTC().toJSDate(), lt: start.plus({ months: 1 }).toUTC().toJSDate() } }, select: { startAt: true, quantity: true } });
+  const booked = new Map<string, number>();
+  for (const booking of bookings) {
+    const date = DateTime.fromJSDate(booking.startAt).setZone(timezone).toISODate();
+    if (date) booked.set(date, (booked.get(date) ?? 0) + booking.quantity);
+  }
+  const today = now.setZone(timezone).toISODate()!;
+  const status: Record<string, DayLoad> = {};
+  for (const date of new Set([...free.keys(), ...booked.keys()])) status[date] = dayLoadStatus(free.get(date) ?? 0, booked.get(date) ?? 0, date < today);
+  return status;
 }
 const waitlistInput = z.object({
   serviceId: z.string().min(1).max(100), staffId: z.string().min(1).max(100).optional(),

@@ -5,7 +5,7 @@ import { Link, redirect, useActionData, useLoaderData, useNavigate, useSearchPar
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Page, Card, BlockStack, Text, Badge, Banner, TextField, Select, Button, Tabs, EmptyState } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
-import { cancelBooking } from "../lib/bookings/service.server";
+import { cancelBooking, monthLoad } from "../lib/bookings/service.server";
 import { formError } from "../lib/admin/errors.server";
 import { AdminRecordAction, AdminCheckbox } from "../components/AdminFields";
 import { bookingFilters, bookingSelect, bookingTabs, bookingViews, calendarDays } from "../lib/bookings/views";
@@ -21,9 +21,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
     db.service.findMany({ where: { active: true }, select: { id: true, title: true }, orderBy: { title: "asc" }, take: 500 }),
     db.insightsSnapshot.findFirst({ where: { createdAt: { gte: DateTime.utc().minus({ days: 1 }).toJSDate() } }, select: { highlights: true, nudge: true, model: true }, orderBy: { createdAt: "desc" } }),
   ]);
+  const load = filters.view === "calendar" ? await monthLoad(shop.id, filters.day.slice(0, 7), filters.timezone) : {};
   await logAccess(shop.id, String(session.onlineAccessInfo?.associated_user.id ?? "merchant"), "view_bookings", bookings.length);
   const { where: _where, orderBy: _orderBy, ...controls } = filters;
-  return { bookings, count, insight, ...controls, staffOptions: staff, serviceOptions: services, setup: { locations, staff: staff.length, services: services.length } };
+  return { bookings, count, insight, load, ...controls, staffOptions: staff, serviceOptions: services, setup: { locations, staff: staff.length, services: services.length } };
 }
 export async function action({ request }: ActionFunctionArgs) {
   const { shop, db, session } = await requireShop(request);
@@ -39,7 +40,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 export default function Bookings() {
   const data = useLoaderData<typeof loader>();
-  const { bookings, count, insight, page, tab, q, timezone, setup, view, day, staff, service, hideChecked, staffOptions, serviceOptions, limit } = data;
+  const { bookings, count, insight, load, page, tab, q, timezone, setup, view, day, staff, service, hideChecked, staffOptions, serviceOptions, limit } = data;
   const result = useActionData<typeof action>();
   const [search] = useSearchParams();
   const navigate = useNavigate();
@@ -132,7 +133,13 @@ export default function Bookings() {
       action={{ content: "Add a booking", url: "/app/bookings/new" }}>
       <p>Bookings show here when customers book on your store, or when you add one yourself.</p>
     </EmptyState></Card>}
-    {view === "calendar" ? <div className="bn-calendar" aria-label="Monthly bookings">{calendarDays(day, timezone).map(cell => <section key={cell.date} className={"bn-calendar-day" + (cell.inMonth ? "" : " bn-calendar-padding")}>
+    {view === "calendar" && <div className="bn-legend" aria-hidden="true">
+      <span className="bn-legend-item bn-day-free">Free</span>
+      <span className="bn-legend-item bn-day-busy">Filling up</span>
+      <span className="bn-legend-item bn-day-full">Full</span>
+      <span className="bn-legend-item bn-day-closed">Closed / past</span>
+    </div>}
+    {view === "calendar" ? <div className="bn-calendar" aria-label="Monthly bookings">{calendarDays(day, timezone).map(cell => <section key={cell.date} className={"bn-calendar-day" + (cell.inMonth ? " bn-day-" + (load[cell.date] ?? "closed") : " bn-calendar-padding")}>
       <h2>{cell.label}</h2>{cell.inMonth && (groups.get(cell.date) ?? []).map(booking => <Link className="bn-calendar-booking" key={booking.id} to={query({ view: "list", q: booking.id, tab: "all", page: "1" })}>
         <time>{local(booking.startAt).toFormat("h:mm a")}</time><strong>{booking.service.title}</strong>{columns.has("customer") && <span>{booking.customerName || booking.customerEmail}</span>}
       </Link>)}

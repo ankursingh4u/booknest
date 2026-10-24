@@ -38,6 +38,20 @@ export function calendarDays(day: string, timezone: string) {
     return { date: value.toISODate()!, label: value.toFormat("ccc d LLL"), day: value.day, inMonth: value.month === month.month };
   });
 }
+export type DayLoad = "free" | "busy" | "full" | "closed" | "past";
+// Colour a calendar day by how full it is: green while under half the seats are booked, amber
+// once it crosses half, red when nothing is left. Past days and days with no bookable capacity
+// (closed / outside the booking window) are neutral.
+export function dayLoadStatus(freeSeats: number, bookedSeats: number, past: boolean): DayLoad {
+  if (past) return "past";
+  const total = freeSeats + bookedSeats;
+  if (total <= 0) return "closed";
+  if (bookedSeats <= 0) return "free";
+  const utilisation = bookedSeats / total;
+  if (utilisation >= 1) return "full";
+  if (utilisation >= 0.5) return "busy";
+  return "free";
+}
 export const bookingSelect = {
   id: true, staffId: true, startAt: true, endAt: true, quantity: true, status: true, checkedInAt: true,
   customerName: true, customerEmail: true, source: true, orderId: true,

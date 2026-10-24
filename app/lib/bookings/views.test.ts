@@ -1,6 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "luxon";
-import { bookingFilters, calendarDays, csvCell, serializeBookings } from "./views";
+import { bookingFilters, calendarDays, csvCell, dayLoadStatus, serializeBookings } from "./views";
+
+describe("dayLoadStatus", () => {
+  it("is green while under half the seats are booked", () => {
+    expect(dayLoadStatus(10, 0, false)).toBe("free");
+    expect(dayLoadStatus(6, 4, false)).toBe("free");   // 40%
+  });
+  it("turns amber from half full, red when nothing is left", () => {
+    expect(dayLoadStatus(5, 5, false)).toBe("busy");   // 50%
+    expect(dayLoadStatus(1, 9, false)).toBe("busy");   // 90%
+    expect(dayLoadStatus(0, 10, false)).toBe("full");  // 100%
+  });
+  it("is neutral for closed days and past days", () => {
+    expect(dayLoadStatus(0, 0, false)).toBe("closed");
+    expect(dayLoadStatus(0, 5, true)).toBe("past");
+    expect(dayLoadStatus(10, 0, true)).toBe("past");
+  });
+});
 describe("booking views", () => {
   const now = DateTime.fromISO("2026-03-08T12:00:00Z");
   it("bounds calendar months in the selected timezone across DST", () => {
