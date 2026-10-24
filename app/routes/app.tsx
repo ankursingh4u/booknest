@@ -34,7 +34,6 @@ export default function App() {
         <Link to="/app/manage/services">Events/Services</Link>
         <Link to="/app/manage/availabilities">Availabilities</Link>
         <Link to="/app/insights">Insights</Link>
-        <Link to="/app/team">Team Portal</Link>
         <Link to="/app/billing">Account and plan</Link>
         <Link to="/app/settings">Settings</Link>
       </NavMenu>
