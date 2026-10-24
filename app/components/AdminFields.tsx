@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Form, useNavigation } from "react-router";
+import { Form, useFetcher, useNavigation } from "react-router";
 import { TextField, Select, ChoiceList, Checkbox, Button, Labelled } from "@shopify/polaris";
 
 type TextFieldType = "text" | "email" | "number" | "password" | "search" | "tel" | "url" | "date" | "datetime-local" | "month" | "time" | "week";
@@ -116,8 +116,13 @@ export function AdminChoiceCard({ name, value, label, description, checked, onSe
 }
 
 export function AdminRecordAction({ id, intent, children, variant = "primary" }: { id: string; intent: string; children: string; variant?: "primary" | "secondary" }) {
-  return <Form method="post">
+  // Submit through a fetcher so the request goes via App Bridge's authenticated fetch. A plain
+  // <Form> POST is a document navigation, which an embedded app cannot re-authenticate (the
+  // "Unable to continue" screen); a fetcher request carries the session token and is retried.
+  const fetcher = useFetcher();
+  const busy = fetcher.state !== "idle";
+  return <fetcher.Form method="post">
     <input type="hidden" name="id" value={id} /><input type="hidden" name="intent" value={intent} />
-    <AdminSaveButton variant={variant}>{children}</AdminSaveButton>
-  </Form>;
+    <Button submit variant={variant === "primary" ? "primary" : undefined} loading={busy}>{busy ? "Working…" : children}</Button>
+  </fetcher.Form>;
 }
