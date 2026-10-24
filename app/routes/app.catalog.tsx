@@ -148,7 +148,7 @@ export default function Catalog() {
           onClick={() => themeLink.load("/app/catalog/theme-link?variantId=" + encodeURIComponent(value.variantId!))}>
           Add booking widget to theme
         </Button>
-        <small>Opens the theme editor directly on this Event/Service's product page, with the booking block ready to add.</small>
+        <small>Opens the theme editor on your product template with the booking block ready to add. If the preview shows a different product, switch it with the product selector at the top — the block still applies to every product linked to a BookNest service.</small>
       </div>}
     </Form></Card>}</div>}
     {creatingService && <ServiceWizard locations={locations} staff={staff} currency={currency} creationKey={creationKey} result={result} onClose={close} />}
