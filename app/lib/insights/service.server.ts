@@ -5,19 +5,23 @@ import { baselineInsights, parseInsight, summarizeMetrics } from "./metrics";
 export async function insightData(shopId: string) {
   const db = getShopDatabase(shopId);
   const shop = await db.shop.findUniqueOrThrow({ where: { id: shopId }, select: { timezone: true } });
-  const end = DateTime.now().setZone(shop.timezone).startOf("day");
+  // Measure recent booking ACTIVITY (by when each booking was made), so upcoming appointments are
+  // included — a store's dashboard should reflect bookings it just took, not only past appointments.
+  const now = DateTime.now().setZone(shop.timezone);
+  const today = now.startOf("day");
+  const end = now;
   const start = end.minus({ days: 30 });
   const groups = (from: DateTime, to: DateTime) => db.booking.groupBy({ by: ["status", "currency", "quantity"],
-    where: { startAt: { gte: from.toJSDate(), lt: to.toJSDate() } }, _count: { _all: true }, _sum: { priceCents: true, paidCents: true } });
+    where: { createdAt: { gte: from.toJSDate(), lt: to.toJSDate() } }, _count: { _all: true }, _sum: { priceCents: true, paidCents: true } });
   const [currentGroups, previousGroups, top, snapshot] = await Promise.all([
     groups(start, end), groups(start.minus({ days: 30 }), start),
-    db.booking.groupBy({ by: ["serviceId"], where: { startAt: { gte: start.toJSDate(), lt: end.toJSDate() }, status: { in: ["CONFIRMED", "COMPLETED", "NO_SHOW"] } },
+    db.booking.groupBy({ by: ["serviceId"], where: { createdAt: { gte: start.toJSDate(), lt: end.toJSDate() }, status: { in: ["CONFIRMED", "COMPLETED", "NO_SHOW"] } },
       _count: { _all: true }, _sum: { quantity: true }, orderBy: { _count: { serviceId: "desc" } }, take: 5 }),
-    db.insightsSnapshot.findUnique({ where: { shopId_forDate: { shopId, forDate: end.toUTC().toJSDate() } }, select: { highlights: true, nudge: true, model: true, createdAt: true } }),
+    db.insightsSnapshot.findUnique({ where: { shopId_forDate: { shopId, forDate: today.toUTC().toJSDate() } }, select: { highlights: true, nudge: true, model: true, createdAt: true } }),
   ]);
   const services = await db.service.findMany({ where: { id: { in: top.map(s => s.serviceId) } }, select: { id: true, title: true } });
   const current = summarizeMetrics(currentGroups), previous = summarizeMetrics(previousGroups);
-  return { current, previous, start: start.toISODate()!, end: end.minus({ days: 1 }).toISODate()!, timezone: shop.timezone, forDate: end.toUTC().toJSDate(),
+  return { current, previous, start: start.toISODate()!, end: today.toISODate()!, timezone: shop.timezone, forDate: today.toUTC().toJSDate(),
     top: top.map(row => ({ title: services.find(s => s.id === row.serviceId)?.title ?? "Archived Event/Service", bookings: row._count._all, guests: row._sum.quantity ?? 0 })),
     insight: snapshot ?? { ...baselineInsights(current, previous), model: "rules-v1", createdAt: null },
     aiAvailable: Boolean(process.env.ANTHROPIC_API_KEY) };
