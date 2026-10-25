@@ -5,6 +5,7 @@ import { Form, useActionData, useLoaderData } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Page, Card, BlockStack, Banner, TextField } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
+import { requireFeature } from "../lib/billing/limits.server";
 import { formError } from "../lib/admin/errors.server";
 import { AdminField as Field, AdminSelectField as SelectField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction, AdminCheckbox } from "../components/AdminFields";
 import { CatalogError } from "../lib/admin/catalog.server";
@@ -29,6 +30,7 @@ export async function action({ request }: ActionFunctionArgs) {
       await db.teamSeat.update({ where: { id }, data: { active: false, inviteTokenHash: null, inviteExpiresAt: null, sessionVersion: { increment: 1 } } });
       return { error: null, invitation: null, revoked: true };
     }
+    requireFeature(shop.plan, "teamPortal");
     const email = z.string().trim().email().max(254).transform(s => s.toLowerCase()).parse(form.get("email"));
     const staffId = z.string().min(1).max(100).parse(form.get("staffId"));
     if (!await db.staffMember.findFirst({ where: { id: staffId, active: true }, select: { id: true } })) throw new CatalogError("Choose an active Availability.");

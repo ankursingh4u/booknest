@@ -3,6 +3,8 @@ import { DateTime } from "luxon";
 import { data, useLoaderData } from "react-router";
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { findShopIdentity, getShopDatabase } from "../db.server";
+import { featureAllowed } from "../lib/billing/limits.server";
+import { limitMessage } from "../lib/billing/limits";
 import { shopFromSessionToken } from "../lib/auth/session-token.server";
 import { encryptToken, nonceHash } from "../lib/calendar/secrets.server";
 export const headers: HeadersFunction = ({ loaderHeaders }) => {
@@ -19,6 +21,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   catch { throw new Response("Your BookNest session expired. Reopen BookNest and click Connect calendar again.", { status: 401 }); }
   const shop = await findShopIdentity(shopDomain);
   if (!shop) throw new Response("This store is not connected to BookNest.", { status: 404 });
+  if (!featureAllowed(shop.plan, "googleCalendar")) throw new Response(limitMessage("googleCalendar"), { status: 403 });
   const db = getShopDatabase(shop.id);
   const nonce = randomBytes(32).toString("base64url"); const verifier = randomBytes(48).toString("base64url");
   const state = await db.googleOAuthState.create({ data: { shopId: shop.id, nonceHash: nonceHash(nonce),

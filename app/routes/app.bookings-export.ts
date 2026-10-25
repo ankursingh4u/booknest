@@ -1,9 +1,12 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { requireShop } from "../lib/auth/admin.server";
+import { featureAllowed } from "../lib/billing/limits.server";
+import { limitMessage } from "../lib/billing/limits";
 import { bookingFilters, bookingSelect, serializeBookings } from "../lib/bookings/views";
 import { logAccess } from "../lib/audit/access-log.server";
 export async function loader({ request }: LoaderFunctionArgs) {
   const { shop, db, session } = await requireShop(request);
+  if (!featureAllowed(shop.plan, "insights")) throw new Response(limitMessage("insights"), { status: 403 });
   const settings = await db.shop.findUniqueOrThrow({ where: { id: shop.id }, select: { timezone: true } });
   const filters = bookingFilters(new URL(request.url).searchParams, settings.timezone);
   const rows = await db.booking.findMany({ where: filters.where, select: bookingSelect, orderBy: filters.orderBy, take: 10001 });

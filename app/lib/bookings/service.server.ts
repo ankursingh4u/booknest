@@ -1,4 +1,5 @@
 import { googleBusyIntervals } from "../calendar/client.server";
+import { requireBookingCapacity } from "../billing/limits.server";
 import { queueBookingNotifications } from "../notifications/outbox.server";
 import { z } from "zod";
 import { paymentDue } from "./checkout";
@@ -150,6 +151,7 @@ export async function createReservation(shopId: string, values: unknown, now: Da
   const answers = z.object({ answers: customerInput.shape.answers }).parse(values).answers;
   const answerSnapshot = (items: typeof answers) => JSON.stringify([...items].sort((a, b) => a.questionId.localeCompare(b.questionId)));
   return withShopTransaction(shopId, async db => {
+    await requireBookingCapacity(db, shopId, now);
     const previous = await db.reservation.findUnique({ where: { shopId_idempotencyKey: { shopId, idempotencyKey: input.idempotencyKey } }, include: { booking: { select: { id: true } } } });
     if (previous) {
       if (!matchesReservation(previous, input) || previous.expiresAt <= now.toJSDate() || previous.booking) throw new BookingError("This reservation request has expired or was already used.");
@@ -175,6 +177,7 @@ export async function createBooking(shopId: string, values: unknown, customer: u
   const input = reservationInput.parse(values);
   const details = customerInput.parse(customer);
   return withShopTransaction(shopId, async db => {
+    await requireBookingCapacity(db, shopId, now);
     const previous = await db.booking.findUnique({ where: { shopId_idempotencyKey: { shopId, idempotencyKey: input.idempotencyKey } } });
     if (previous) {
       if (!matchesReservation(previous, input) || previous.customerEmail !== details.email || previous.source !== source) throw new BookingError("This booking request was already used.");

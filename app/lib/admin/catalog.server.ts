@@ -2,6 +2,7 @@ import { z } from "zod";
 import { newServiceIdentity, productIdentity } from "../shopify/product-setup.server";
 import type { BookingProductInput } from "../shopify/product-setup.server";
 import { getShopDatabase, withShopTransaction } from "../../db.server";
+import { requireCatalogCapacity } from "../billing/limits.server";
 import { locationSchema, serviceSchema, staffSchema, formValues } from "./schemas";
 export const catalogKind = z.enum(["locations", "availabilities", "services"]);
 export class CatalogError extends Error {}
@@ -53,6 +54,7 @@ export async function mutateCatalog(shopId: string, kind: z.infer<typeof catalog
       if (!active && (await db.service.count({ where: { locationId: id, active: true } }))) throw new CatalogError("Archive the Events/Services at this location first.");
       return db.location.update({ where: { id }, data: { active } });
     }
+    if (active) await requireCatalogCapacity(db, shopId, kind);
     if (kind === "availabilities") return db.staffMember.update({ where: { id }, data: { active } });
     return db.service.update({ where: { id }, data: { active } });
   }
@@ -65,9 +67,11 @@ export async function mutateCatalog(shopId: string, kind: z.infer<typeof catalog
     const data = staffSchema.parse(values);
     const found = await db.location.count({ where: { id: { in: data.locationIds }, active: true } });
     if (found !== data.locationIds.length) throw new CatalogError("Choose active locations belonging to your store.");
+    if (!id) await requireCatalogCapacity(db, shopId, kind);
     return id ? db.staffMember.update({ where: { id }, data }) : db.staffMember.create({ data: { ...data, shopId } });
   }
   const { staffIds, productMode, ...data } = serviceSchema.parse(values);
+  if (!id) await requireCatalogCapacity(db, shopId, kind);
   const serviceId = id ?? newServiceIdentity(shopId, z.string().uuid().parse(form.get("creationKey")));
   return withShopTransaction(shopId, async tx => {
     // Validate tenant ownership and all local references before creating any Shopify resource.

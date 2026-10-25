@@ -2,11 +2,27 @@ import { Form, Link, useActionData, useLoaderData, useNavigation } from "react-r
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Page, Card, BlockStack, Banner, Button, EmptyState, Text } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
+import { featureAllowed } from "../lib/billing/limits.server";
+import { limitMessage } from "../lib/billing/limits";
 import { insightData, generateInsight } from "../lib/insights/service.server";
-export async function loader({ request }: LoaderFunctionArgs) { const { shop } = await requireShop(request); return insightData(shop.id); }
-export async function action({ request }: ActionFunctionArgs) { const { shop } = await requireShop(request); return generateInsight(shop.id); }
+export async function loader({ request }: LoaderFunctionArgs) {
+  const { shop } = await requireShop(request);
+  if (!featureAllowed(shop.plan, "insights")) return { gated: true as const };
+  return { gated: false as const, ...await insightData(shop.id) };
+}
+export async function action({ request }: ActionFunctionArgs) {
+  const { shop } = await requireShop(request);
+  if (!featureAllowed(shop.plan, "insights")) throw new Response(limitMessage("insights"), { status: 403 });
+  return generateInsight(shop.id);
+}
 export default function Insights() {
-  const { current, previous, start, end, timezone, top, insight, aiAvailable } = useLoaderData<typeof loader>();
+  const data = useLoaderData<typeof loader>();
+  if (data.gated) return <Page title="Booking insights" subtitle="Trends, cancellations, and amounts for your bookings">
+    <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Available on the Pro plan</Text>
+      <p>Booking insights and CSV export are part of the Pro plan and above.</p>
+      <div><Button url="/app/billing" variant="primary">View plans</Button></div>
+    </BlockStack></Card></Page>;
+  const { current, previous, start, end, timezone, top, insight, aiAvailable } = data;
   const result = useActionData<typeof action>(), navigation = useNavigation();
   const money = (value: number, currency: string) => new Intl.NumberFormat(undefined, { style: "currency", currency }).format(value / 100);
   if (current.bookings === 0 && previous.bookings === 0 && !top.length) {

@@ -3,6 +3,7 @@ import { Form, Link, redirect, useActionData, useLoaderData, useSearchParams } f
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Page, Card, BlockStack, Text, Banner } from "@shopify/polaris";
 import { requireShop } from "../lib/auth/admin.server";
+import { requireFeature } from "../lib/billing/limits.server";
 import { formError } from "../lib/admin/errors.server";
 import { AdminField as Field, AdminSelectField as SelectField, AdminSaveButton as SaveButton, AdminRecordAction as RecordAction, AdminCheckbox } from "../components/AdminFields";
 const questionSchema = z.object({
@@ -31,7 +32,10 @@ export async function action({ request }: ActionFunctionArgs) {
       if (id) {
         const existing = await db.intakeQuestion.findUniqueOrThrow({ where: { id } });
         await db.intakeQuestion.update({ where: { id }, data: { ...values, serviceId: existing.serviceId } });
-      } else await db.intakeQuestion.create({ data: { ...values, shopId: shop.id } });
+      } else {
+        requireFeature(shop.plan, "intake");
+        await db.intakeQuestion.create({ data: { ...values, shopId: shop.id } });
+      }
     }
     return redirect("/app/intake?saved=1");
   } catch (error) { return formError(error); }
