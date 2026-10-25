@@ -16,8 +16,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const tokens = await exchangeGoogleToken({ grant_type: "authorization_code", code, code_verifier: decryptToken(state.verifier), redirect_uri: process.env.GOOGLE_REDIRECT_URI! });
   if (!tokens.refresh_token) throw new Response("Google did not provide offline access. Reconnect and grant calendar access.", { status: 400 });
   await withShopTransaction(state.shopId, async tx => {
-    await tx.staffMember.update({ where: { id: state.staffId }, data: { googleRefreshToken: encryptToken(tokens.refresh_token!), googleCalendarId: "primary", googleSyncError: null } });
-    const bookings = await tx.booking.findMany({ where: { staffId: state.staffId, status: "CONFIRMED", startAt: { gt: DateTime.utc().toJSDate() } }, select: { id: true, startAt: true } });
+    await tx.shop.update({ where: { id: state.shopId }, data: { googleRefreshToken: encryptToken(tokens.refresh_token!), googleCalendarId: "primary", googleSyncError: null } });
+    const bookings = await tx.booking.findMany({ where: { status: "CONFIRMED", startAt: { gt: DateTime.utc().toJSDate() } }, select: { id: true, startAt: true } });
     if (bookings.length) await tx.notificationTask.createMany({ data: bookings.map(booking => ({ shopId: state.shopId, bookingId: booking.id, kind: "CALENDAR_SYNC",
       expectedStartAt: booking.startAt, dedupeKey: "calendar-connect:" + state.id + ":" + booking.id, runAt: DateTime.utc().toJSDate() })), skipDuplicates: true });
   });

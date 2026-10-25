@@ -7,7 +7,7 @@ export const calendarPage = z.object({
     start: time.optional(), end: time.optional(), extendedProperties: z.object({ private: z.record(z.string()).optional() }).optional(),
   })).default([]),
 });
-export function calendarIntervals(value: unknown, known: { id: string; startAt: Date; endAt: Date }[], staffId: string) {
+export function calendarIntervals(value: unknown, known: { id: string; startAt: Date; endAt: Date }[]) {
   const page = calendarPage.parse(value);
   return page.items.flatMap(event => {
     if (event.status === "cancelled" || event.transparency === "transparent") return [];
@@ -17,6 +17,6 @@ export function calendarIntervals(value: unknown, known: { id: string; startAt: 
     if (!startAt.isValid || !endAt.isValid || endAt <= startAt) throw new Error("Calendar returned an invalid interval");
     const booking = known.find(item => item.id === event.extendedProperties?.private?.booknestBooking);
     if (booking && booking.startAt.getTime() === startAt.toMillis() && booking.endAt.getTime() === endAt.toMillis()) return [];
-    return [{ startAt, endAt, staffId }];
+    return [{ startAt, endAt }];
   });
 }

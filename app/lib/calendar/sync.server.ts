@@ -13,26 +13,26 @@ export async function syncBookingCalendar(shopId: string, taskId: string) {
     if (booking.startAt.getTime() !== task.expectedStartAt.getTime()) {
       await tx.notificationTask.update({ where: { id: taskId }, data: { completedAt: DateTime.utc().toJSDate() } }); return;
     }
-    const staff = await tx.staffMember.findUniqueOrThrow({ where: { id: booking.staffId }, select: { googleCalendarId: true } });
-    if (booking.googleEventId && booking.googleEventStaffId && booking.googleEventCalendarId
-      && (booking.status === "CANCELLED" || booking.googleEventStaffId !== booking.staffId || !staff.googleCalendarId)) {
-      const response = await calendarRequest(shopId, booking.googleEventStaffId, "calendars/" + encodeURIComponent(booking.googleEventCalendarId) + "/events/" + encodeURIComponent(booking.googleEventId) + "?sendUpdates=none", { method: "DELETE" });
+    const shop = await tx.shop.findUniqueOrThrow({ where: { id: shopId }, select: { googleCalendarId: true } });
+    if (booking.googleEventId && booking.googleEventCalendarId
+      && (booking.status === "CANCELLED" || !shop.googleCalendarId || booking.googleEventCalendarId !== shop.googleCalendarId)) {
+      const response = await calendarRequest(shopId, "calendars/" + encodeURIComponent(booking.googleEventCalendarId) + "/events/" + encodeURIComponent(booking.googleEventId) + "?sendUpdates=none", { method: "DELETE" });
       if (!response.ok && response.status !== 404 && response.status !== 410) throw new Error("Calendar event could not be removed");
-      await tx.booking.update({ where: { id: booking.id }, data: { googleEventId: null, googleEventStaffId: null, googleEventCalendarId: null } });
+      await tx.booking.update({ where: { id: booking.id }, data: { googleEventId: null, googleEventCalendarId: null } });
     }
-    if (["CONFIRMED", "COMPLETED", "NO_SHOW"].includes(booking.status) && staff.googleCalendarId) {
+    if (["CONFIRMED", "COMPLETED", "NO_SHOW"].includes(booking.status) && shop.googleCalendarId) {
       const id = "bn" + createHash("sha256").update(shopId + ":" + booking.id).digest("hex");
       const event = { id, status: "confirmed", summary: booking.service.title + " · " + (booking.customerName || "Customer"), location: booking.location.name,
         description: "BookNest booking " + booking.id + (booking.contactLink ? "\n" + booking.contactLink : ""),
         start: { dateTime: booking.startAt.toISOString(), timeZone: "UTC" }, end: { dateTime: booking.endAt.toISOString(), timeZone: "UTC" },
         extendedProperties: { private: { booknestShop: shopId, booknestBooking: booking.id } } };
-      const basePath = "calendars/" + encodeURIComponent(staff.googleCalendarId) + "/events";
-      let response = await calendarRequest(shopId, booking.staffId, basePath + "?sendUpdates=none", { method: "POST", body: JSON.stringify(event) });
-      if (response.status === 409) response = await calendarRequest(shopId, booking.staffId, basePath + "/" + id + "?sendUpdates=none", { method: "PUT", body: JSON.stringify(event) });
+      const basePath = "calendars/" + encodeURIComponent(shop.googleCalendarId) + "/events";
+      let response = await calendarRequest(shopId, basePath + "?sendUpdates=none", { method: "POST", body: JSON.stringify(event) });
+      if (response.status === 409) response = await calendarRequest(shopId, basePath + "/" + id + "?sendUpdates=none", { method: "PUT", body: JSON.stringify(event) });
       if (!response.ok) throw new Error("Calendar event could not be saved");
-      await tx.booking.update({ where: { id: booking.id }, data: { googleEventId: id, googleEventStaffId: booking.staffId, googleEventCalendarId: staff.googleCalendarId } });
-      await tx.staffMember.update({ where: { id: booking.staffId }, data: { googleSyncError: null } });
+      await tx.booking.update({ where: { id: booking.id }, data: { googleEventId: id, googleEventCalendarId: shop.googleCalendarId } });
+      await tx.shop.update({ where: { id: shopId }, data: { googleSyncError: null } });
     }
     await tx.notificationTask.update({ where: { id: taskId }, data: { completedAt: DateTime.utc().toJSDate(), lastError: null } });
-  }, [initial.staffId, ...(initial.googleEventStaffId ? [initial.googleEventStaffId] : [])]);
+  }, [initial.staffId]);
 }

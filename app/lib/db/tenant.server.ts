@@ -18,7 +18,6 @@ const relationModels = new Set(["ServiceStaff", "IntakeAnswer", "JobLog"]);
 
 // These IDs are scalar fields without declared Prisma relations in the scaffold.
 const scalarReferences: Record<string, { type: string; relationFromFields: string[]; relationToFields: string[] }[]> = {
-  Booking: [{ type: "StaffMember", relationFromFields: ["googleEventStaffId"], relationToFields: ["id"] }],
   TeamSeat: [{ type: "StaffMember", relationFromFields: ["staffId"], relationToFields: ["id"] }],
   WaitlistEntry: [
     { type: "Service", relationFromFields: ["serviceId"], relationToFields: ["id"] },

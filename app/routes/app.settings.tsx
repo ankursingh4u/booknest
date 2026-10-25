@@ -40,7 +40,7 @@ export default function Settings() {
       <a href={"https://" + settings.domain + "/admin/themes/current/editor"} target="_blank" rel="noreferrer">Open theme editor</a>
     </BlockStack></Card>
     <Card><BlockStack gap="400"><Text as="h2" variant="headingMd">Google Calendar</Text>
-      <p>Connect each Availability's Google Calendar so confirmed bookings appear on their calendar automatically.{calendarConfigured ? "" : " Google Calendar sync still needs application credentials before an Availability can connect."}</p>
+      <p>Connect one Google Calendar for the whole store so every confirmed booking appears on it automatically.{calendarConfigured ? "" : " Google Calendar sync still needs application credentials before the store can connect."}</p>
       <div><Button url="/app/calendar">{calendarConfigured ? "Connect Google Calendar" : "Google Calendar setup"}</Button></div>
     </BlockStack></Card>
   </BlockStack></Page>;

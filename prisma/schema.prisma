@@ -20,6 +20,9 @@ model Shop {
   trialEndsAt DateTime?
   onboardedAt DateTime?
   uninstalledAt DateTime?
+  googleRefreshToken String?
+  googleCalendarId   String?
+  googleSyncError    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -127,9 +130,6 @@ model StaffMember {
   bio                String?
   timezone           String
   active             Boolean  @default(true)
-  googleRefreshToken String?
-  googleCalendarId   String?
-  googleSyncError    String?
   createdAt          DateTime @default(now())
 
   locationIds  String[]
@@ -295,7 +295,6 @@ model Booking {
   rescheduleToken String        @unique @default(uuid())
   cancelToken     String        @unique @default(uuid())
   googleEventId   String?
-  googleEventStaffId String?
   googleEventCalendarId String?
   checkedInAt     DateTime?
   checkedInBy     String?
@@ -484,8 +483,8 @@ model GoogleOAuthState {
   id String @id @default(uuid())
   shopId String
   shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  staffId String
-  staff StaffMember @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staffId String?
+  staff StaffMember? @relation(fields: [staffId], references: [id], onDelete: Cascade)
   nonceHash String
   verifier String
   expiresAt DateTime

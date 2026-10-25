@@ -23,7 +23,7 @@ async function availabilityForWindow(db: Database, shopId: string, serviceId: st
   const end = monthRange ? start.plus({ months: 1 }) : start.plus({ days: 1 });
   const assignments = await db.serviceStaff.findMany({ where: { serviceId } });
   const staff = await db.staffMember.findMany({ where: { id: { in: assignments.map(s => s.staffId), ...(staffId ? { equals: staffId } : {}) },
-    active: true, locationIds: { has: location.id } }, select: { id: true, firstName: true, lastName: true, contactLink: true, googleCalendarId: true } });
+    active: true, locationIds: { has: location.id } }, select: { id: true, firstName: true, lastName: true, contactLink: true } });
   const staffIds = staff.map(s => s.id);
   const occupiedWindow = { startAt: { lt: end.plus({ days: 2 }).toJSDate() }, endAt: { gt: start.minus({ days: 2 }).toJSDate() } };
   const [rules, additionalHours, blackouts, timeOff, bookings, reservations, shop] = await Promise.all([
@@ -35,9 +35,9 @@ async function availabilityForWindow(db: Database, shopId: string, serviceId: st
       include: { service: { select: { bufferBefore: true, bufferAfter: true } } } }),
     db.reservation.findMany({ where: { ...occupiedWindow, staffId: { in: staffIds }, expiresAt: { gt: now.toJSDate() }, booking: null,
       ...(excludeReservationId ? { id: { not: excludeReservationId } } : {}) }, include: { service: { select: { bufferBefore: true, bufferAfter: true } } } }),
-    db.shop.findUniqueOrThrow({ where: { id: shopId }, select: { currency: true, domain: true } }),
+    db.shop.findUniqueOrThrow({ where: { id: shopId }, select: { currency: true, domain: true, googleCalendarId: true } }),
   ]);
-  const calendarBusy = (await Promise.all(staff.filter(person => person.googleCalendarId).map(person => googleBusyIntervals(shopId, person.id, person.googleCalendarId!, start.minus({ days: 1 }), end.plus({ days: 2 }))))).flat();
+  const calendarBusy = shop.googleCalendarId ? await googleBusyIntervals(shopId, shop.googleCalendarId, start.minus({ days: 1 }), end.plus({ days: 2 })) : [];
   const from = (value: Date) => DateTime.fromJSDate(value, { zone: "utc" });
   const serviceRules = rules.filter(rule => rule.serviceId === serviceId);
   const slots = computeSlots({
